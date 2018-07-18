@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::error;
 use std::fmt;
+use std::mem;
 
 use field::Field;
 use scanner::Scanner;
@@ -53,32 +54,40 @@ impl fmt::Display for BcbpParserError {
 struct Parser<'a> {
   /// If true, all fields are validated while parsing.
   strict: bool,
+  /// Scanner over the input string.
+  scanner: Scanner<'a>,
   /// The boarding pass under construction.
-  target: Bcbp<'a>,
+  target: Bcbp,
 }
 
 impl<'a> Parser<'a> {
 
   /// Creates a new instance of the parser and boarding pass under construction.
-  fn new(input: String, strict: bool) -> Self {
-    Parser {
+  pub fn new(input: &'a str, strict: bool) -> Self {
+    let mut parser = Parser {
       strict: strict,
+      scanner: Scanner::new(input),
       target: Bcbp {
-        pass_data: input,
         unique_fields: HashMap::new(),
-        legs: Vec::with_capacity(1),
+        legs: Vec::new(),
       }
-    }
+    };
+    parser
+  }
+  
+  /// Parses the fields of the BCBP starting from the root, consuming the receiver.
+  pub fn parse(mut self) -> Result<Bcbp, BcbpParserError> {
+    Ok(self.target)
   }
 
 }
 
 /// Parses the `input` with optional conformance verification to yield a BCBP object or parse error.
-pub(crate) fn parse<'a, I>(input: I, strict: bool) -> Result<Bcbp<'a>, BcbpParserError>
+pub(crate) fn parse<I>(input: I, strict: bool) -> Result<Bcbp, BcbpParserError>
 where
-  I: Into<String> 
+  I: AsRef<str>
 {
-  let input_string = input.into();
+  let input_string = input.as_ref();
 
   // BCBP strings are required to be 7-bit ASCII.
   if !input_string.is_ascii() {
@@ -101,7 +110,5 @@ where
     return Err(BcbpParserError::TooShort);
   }
 
-
-
-  Err(BcbpParserError::NoLegs)
+  Parser::new(input_string, strict).parse()
 }

@@ -46,7 +46,7 @@ pub struct Scanner<'a> {
 impl<'a> Scanner<'a> {
 
   /// Creates a new tokenizer over the `input` string.
-  fn new(input: &'a str) -> Self {
+  pub fn new(input: &'a str) -> Self {
     Scanner {
       input: input,
       offset: 0,
@@ -65,12 +65,6 @@ impl<'a> Scanner<'a> {
     self.input.len().saturating_sub(self.offset)
   }
 
-  /// Returns `true` if the scanner has reached the end of the input.
-  #[inline]
-  pub fn is_at_end(&self) -> bool {
-    self.remaining_len() == 0
-  }
-
   /// Attempts to scan a field with an explicit length.
   /// Leading and trailing whitespace will be trimmed off.
   /// 
@@ -80,7 +74,10 @@ impl<'a> Scanner<'a> {
   pub fn scan_field_len(&mut self, field: field::Field, length: usize, required: bool, strict: bool) -> Result<&'a str, ScannerError> {
     assert!(length > 0 && (field.len() == 0 || field.len() == length));
 
+    print!("[TRACE] {} ", field);
+
     if self.remaining_len() < length {
+      println!("<FAILED: Field Too Long>");
       return Err(ScannerError::FieldTooLong);
     }
 
@@ -91,6 +88,7 @@ impl<'a> Scanner<'a> {
     // If the field is required, it cannot be empty.
     if required {
       if substring.chars().all(|c| c == ' ') {
+        println!("<FAILED: Required Field Empty>");
         return Err(ScannerError::RequiredFieldEmpty);
       }
     }
@@ -98,10 +96,12 @@ impl<'a> Scanner<'a> {
     // If Strict mode is requsted, validate the field.
     if strict {
       if !substring.conforms_to(field.data_format()) {
+        println!("<FAILED: Validation of Strict Field Failed>");
         return Err(ScannerError::ValidationFailed);
       }
     }
 
+    println!("is '{}'", substring.trim());
     Ok(substring.trim())
   }
 
@@ -114,18 +114,4 @@ impl<'a> Scanner<'a> {
     self.scan_field_len(field, field.len(), required, strict)
   }
 
-}
-
-/// Trait to return a scanner over the input.
-pub trait Scannable<'a> {
-  fn scanner(&'a self) -> Scanner<'a>;
-}
-
-/// Allows scanning of anything representable as a `str`.
-impl<'a, T> Scannable<'a> for T
-where
-  T: AsRef<str> + 'a {
-  fn scanner(&'a self) -> Scanner<'a> {
-    Scanner::new(self.as_ref())
-  }
 }

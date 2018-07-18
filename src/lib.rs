@@ -15,29 +15,27 @@ pub use parser::BcbpParserError;
 mod scanner;
 
 #[derive(Clone,Eq,PartialEq,Debug)]
-pub struct Leg<'a> {
+pub struct Leg {
   /// Backing store for the string slices pertaining to each repeated field.
-  fields: HashMap<Field, &'a str>,
+  fields: HashMap<Field, String>,
 }
 
 #[derive(Clone,Eq,PartialEq,Debug)]
-pub struct Bcbp<'a> {
-  /// Underlying fields in the BCBP are stored as references into the pass data.
-  pass_data: String,
+pub struct Bcbp {
   /// Backing store for the string slices pertaining to each unique field.
-  unique_fields: HashMap<Field, &'a str>,
+  unique_fields: HashMap<Field, String>,
   /// Backing stores for string slices in repeated fields.
-  legs: Vec<Leg<'a>>,
+  legs: Vec<Leg>,
 }
 
-impl<'a> Bcbp<'a> {
+impl Bcbp {
 
   /// Constructs a new instance of the receiver with `input` data.
   /// If `strict` mode is `true`, the format of each encountered field is validated.
   /// Otherwise, only fields required for parsing the BCBP string are validated.
   pub fn from_str_strict<T>(input: T, strict: bool) -> Result<Self, BcbpParserError>
   where
-    T: Into<String>
+    T: AsRef<str>
   {
     parser::parse(input, strict)
   }
@@ -45,7 +43,7 @@ impl<'a> Bcbp<'a> {
 }
 
 /// The `FromStr` parse operation utilizes strict mode by default.
-impl<'a> FromStr for Bcbp<'a> {
+impl FromStr for Bcbp {
   type Err = BcbpParserError;
   fn from_str(input: &str) -> Result<Self, Self::Err> {
     Bcbp::from_str_strict(input, true)
