@@ -1,6 +1,33 @@
 
 use std::fmt;
 
+/// Format of the field when parsing in strict mode.
+#[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Debug,Hash)]
+pub enum DataFormat {
+  /// Any printable ASCII character plus tab, line-feed and carriage return.
+  Arbitrary,
+  /// IATA Resolution 729 Appendix A format specifier 'f'.
+  /// Any valid ASCII character including spaces.
+  IataAlphaNumerical,
+  /// IATA Resolution 729 Appendix A format specifier 'N'.
+  /// All spaces or in the ASCII range `'0' ... '9'`.
+  IataNumerical,
+  /// A subset of IATA Resolution 729 Appendix A format specifier 'f'.
+  /// All spaces or in the ASCII range `'0' ... '9'` and `'A' ... 'F'`.
+  IataNumericalHexadecimal,
+  /// IATA Resolution 729 Appendix A format specifier 'a'.
+  /// In the ASCII range `'A' ... 'Z'` or space.
+  IataAlphabetical,
+  /// A literal character.
+  Literal(char),
+  /// A flight number with format specifier 'NNNN[a]'.
+  FlightNumber,
+  /// A seat number with format specifier 'NNNa'.
+  SeatNumber,
+  /// A check-in sequence number with format specifier 'NNNN[f]'.
+  CheckInSequenceNumber,
+}
+
 #[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Debug,Hash)]
 pub enum Field {
   /// Item 1: Format Code. 1 byte. Data Type 'f'.
@@ -8,8 +35,8 @@ pub enum Field {
   /// Item 4: Airline Individual Use. n bytes. Data Type unspecified.
   AirlineIndividualUse,
   /// Item 5: Number of Legs Encoded. 1 byte. Data Type 'N'.
-  NumberOfLegs,
-  /// Item 6: Field Size of Variable Size Field. 2 byte. Data Type 'f'.
+  NumberOfLegsEncoded,
+  /// Item 6: Field Size of Variable Size Field. 2 byte. Data Type 'f'. Hexadecimal.
   FieldSizeOfVariableSizeField,
   /// Item 7: Operating Carrier PNR Code. 7 bytes. Data Type 'f'.
   OperatingCarrierPnrCode,
@@ -17,7 +44,7 @@ pub enum Field {
   BeginningOfVersionNumber,
   /// Item 9: Version Number. 1 byte. Data Type 'f'.
   VersionNumber,
-  /// Item 10: Field Size of Structured Message. 2 byte. Data Type 'f'.
+  /// Item 10: Field Size of Structured Message. 2 byte. Data Type 'f'. Hexadecimal.
   FieldSizeOfStructuredMessageUnique,
   /// Item 11: Passenger Name. 20 bytes. Data Type 'f'.
   PassengerName,
@@ -29,7 +56,7 @@ pub enum Field {
   PassengerDescription,
   /// Item 16: Document Type. 1 byte. Data Type 'f'.
   DocumentType,
-  /// Item 17: Field Size of Structured Message. 2 byte. Data Type 'f'.
+  /// Item 17: Field Size of Structured Message. 2 byte. Data Type 'f'. Hexadecimal.
   FieldSizeOfStructuredMessageRepeated,
   /// Item 18: Selectee Indicator. 1 byte. Data Type 'f'.
   SelecteeIndicator,
@@ -49,7 +76,7 @@ pub enum Field {
   FromCityAirportCode,
   /// Item 28: Type of Security Data. 1 byte. Data Type 'f'.
   TypeOfSecurityData,
-  /// Item 29: Length of Security Data. 2 bytes. Data Type 'f'.
+  /// Item 29: Length of Security Data. 2 bytes. Data Type 'f'. Hexadecimal.
   LengthOfSecurityData,
   /// Item 30: Security Data. n bytes. Data Type 'f'.
   SecurityData,
@@ -94,11 +121,11 @@ pub enum Field {
 impl Field {
 
   /// Item number as defined in the Implementation Guide.
-  fn item_number(self) -> usize {
+  pub fn item_number(self) -> usize {
     match self {
       Field::FormatCode => 1,
       Field::AirlineIndividualUse => 4,
-      Field::NumberOfLegs => 5,
+      Field::NumberOfLegsEncoded => 5,
       Field::FieldSizeOfVariableSizeField => 6,
       Field::OperatingCarrierPnrCode => 7,
       Field::BeginningOfVersionNumber => 8,
@@ -142,12 +169,12 @@ impl Field {
     }
   }
 
-  /// The length of the field when present.
-  fn length(self) -> usize {
+  /// The required length of the field. If zero, the field may be arbitrarily long.
+  pub fn len(self) -> usize {
     match self {
       Field::FormatCode => 1,
       Field::AirlineIndividualUse => 0,
-      Field::NumberOfLegs => 1,
+      Field::NumberOfLegsEncoded => 1,
       Field::FieldSizeOfVariableSizeField => 2,
       Field::OperatingCarrierPnrCode => 7,
       Field::BeginningOfVersionNumber => 1,
@@ -192,13 +219,13 @@ impl Field {
   }
 
   /// Name of the field as defined in the Implementation Guide.
-  fn name(self) -> &'static str {
+  pub fn name(self) -> &'static str {
     match self {
       Field::FormatCode => 
         "Format Code",
       Field::AirlineIndividualUse => 
         "Airline Individual Use",
-      Field::NumberOfLegs => 
+      Field::NumberOfLegsEncoded => 
         "Number of Legs Encoded",
       Field::FieldSizeOfVariableSizeField => 
         "Field Size of Variable Size Field",
@@ -280,6 +307,98 @@ impl Field {
         "Electronic Ticket Indicator",
       Field::FastTrack => 
         "Fast Track",
+    }
+  }
+
+  /// The data format to be used in validation.
+  pub fn data_format(self) -> DataFormat {
+    match self {
+      Field::FormatCode =>
+        DataFormat::IataAlphaNumerical,
+      Field::AirlineIndividualUse =>
+        DataFormat::Arbitrary,
+      Field::NumberOfLegsEncoded =>
+        DataFormat::IataNumerical,
+      Field::FieldSizeOfVariableSizeField =>
+        DataFormat::IataNumericalHexadecimal,
+      Field::OperatingCarrierPnrCode =>
+        DataFormat::IataAlphaNumerical,
+      Field::BeginningOfVersionNumber =>
+        DataFormat::Literal('>'),
+      Field::VersionNumber =>
+        DataFormat::IataAlphaNumerical,
+      Field::FieldSizeOfStructuredMessageUnique =>
+        DataFormat::IataNumericalHexadecimal,
+      Field::PassengerName =>
+        DataFormat::IataAlphaNumerical,
+      Field::SourceOfCheckIn =>
+        DataFormat::IataAlphaNumerical,
+      Field::SourceOfBoardingPassIssuance =>
+        DataFormat::IataAlphaNumerical,
+      Field::PassengerDescription =>
+        DataFormat::IataAlphaNumerical,
+      Field::DocumentType =>
+        DataFormat::IataAlphaNumerical,
+      Field::FieldSizeOfStructuredMessageRepeated =>
+        DataFormat::IataNumericalHexadecimal,
+      Field::SelecteeIndicator =>
+        DataFormat::IataAlphaNumerical,
+      Field::MarketingCarrierDesignator =>
+        DataFormat::IataAlphaNumerical,
+      Field::FrequentFlyerAirlineDesignator =>
+        DataFormat::IataAlphaNumerical,
+      Field::AirlineDesignatorOfBoardingPassIssuer =>
+        DataFormat::IataAlphaNumerical,
+      Field::DateOfIssueOfBoardingPass =>
+        DataFormat::IataNumerical,
+      Field::BaggageTagLicensePlateNumbers =>
+        DataFormat::IataAlphaNumerical,
+      Field::BeginningOfSecurityData =>
+        DataFormat::Literal('^'),
+      Field::FromCityAirportCode =>
+        DataFormat::IataAlphabetical,
+      Field::TypeOfSecurityData =>
+        DataFormat::IataAlphaNumerical,
+      Field::LengthOfSecurityData =>
+        DataFormat::IataNumericalHexadecimal,
+      Field::SecurityData =>
+        DataFormat::Arbitrary,
+      Field::FirstNonConsecutiveBaggageTagLicensePlateNumber =>
+        DataFormat::IataAlphaNumerical,
+      Field::SecondNonConsecutiveBaggageTagLicensePlateNumber =>
+        DataFormat::IataAlphaNumerical,
+      Field::ToCityAirportCode =>
+        DataFormat::IataAlphabetical,
+      Field::OperatingCarrierDesignator =>
+        DataFormat::IataAlphaNumerical,
+      Field::FlightNumber =>
+        DataFormat::FlightNumber,
+      Field::DateOfFlight =>
+        DataFormat::IataNumerical,
+      Field::CompartmentCode =>
+        DataFormat::IataAlphabetical,
+      Field::IdAdIndicator =>
+        DataFormat::IataAlphaNumerical,
+      Field::SeatNumber =>
+        DataFormat::SeatNumber,
+      Field::CheckInSequenceNumber =>
+        DataFormat::CheckInSequenceNumber,
+      Field::InternationalDocumentVerification =>
+        DataFormat::IataAlphaNumerical,
+      Field::PassengerStatus =>
+        DataFormat::IataAlphaNumerical,
+      Field::FreeBaggageAllowance =>
+        DataFormat::IataAlphaNumerical,
+      Field::AirlineNumericCode =>
+        DataFormat::IataNumerical,
+      Field::DocumentFormSerialNumber =>
+        DataFormat::IataAlphaNumerical,
+      Field::FrequentFlyerNumber =>
+        DataFormat::IataAlphaNumerical,
+      Field::ElectronicTicketIndicator =>
+        DataFormat::IataAlphaNumerical,
+      Field::FastTrack =>
+        DataFormat::IataAlphaNumerical,
     }
   }
 

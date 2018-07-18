@@ -3,81 +3,28 @@
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
-//! Scanner processes an input string in response to expected fields.
-//! The scanner operates by returning substrings of the input without
-//! performing allocations.
-//!
-//! # Notes
-//! 1. This module does support Unicode.
-
 use std::error;
 use std::fmt;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum CharacterSet {
-  /// All ASCII Characters.
-  All,
-  /// IATA Resolution 729 Appendix A format specifier 'f'.
-  /// Any valid ASCII character.
-  IataAlphaNumerical,
-  /// IATA Resolution 729 Appendix A format specifier 'N'.
-  /// In the ASCII range `'0' ... '9'`.
-  IataNumerical,
-  /// A subset of IATA Resolution 729 Appendix A format specifier 'f'.
-  /// In the ASCII range `'0' ... '9'` and `'A' ... 'F'`.
-  IataNumericalHexadecimal,
-  /// IATA Resolution 729 Appendix A format specifier 'a'.
-  /// In the ASCII range `'A' ... 'Z'`.
-  IataAlphabetical,
-}
-
-impl CharacterSet {
-  fn contains(&self, character: char) -> bool {
-    match self {
-      &CharacterSet::All =>
-        character.is_ascii(),
-      &CharacterSet::IataAlphaNumerical =>
-        character.is_ascii(),
-      &CharacterSet::IataNumerical =>
-        character.is_ascii_digit(),
-      &CharacterSet::IataNumericalHexadecimal =>
-        character.is_ascii_hexdigit() && (character.is_ascii_uppercase() || character.is_ascii_digit()),
-      &CharacterSet::IataAlphabetical =>
-        character.is_ascii_uppercase(),
-    }
-  }
-}
+use field;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ScannerError {
-  /// The remaining input is not long enough to extract the desired field.
-  FieldLongerThanRemainingInput,
-  /// A character is not in the required set for the specified item.
-  InvalidCharacter { value: char, set: CharacterSet },
-  /// An valid numeric literal was encountered with `value` out of range.
-  NumericLiteralOutOfRange,
+  /// The requested field is longer than the un-processed input.
+  FieldTooLong,
+  /// Unable to validate the field.
+  ValidationFailed,
 }
 
-impl error::Error for ScannerError {
-  /// Returns a string slice with a general description of a scanner error.
-  /// No specific information is contained. To obtain a printable representation,
-  /// use the `fmt::Display` attribute.
-  fn description(&self) -> &str {
-    "scanner error"
-  }
-}
+impl error::Error for ScannerError {}
 
 impl fmt::Display for ScannerError {
-  /// Formats the receiver for display purposes into formatter `f`. Names are lower-case.
-  /// Returns a result representing the formatted receiver or a failure to write into `f`.
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ScannerError::FieldLongerThanRemainingInput =>
-        write!(f, "field length exceeds the length of the input remaining"),
-      ScannerError::NumericLiteralOutOfRange =>
-        write!(f, "numeric literal out of range"),
-      ScannerError::InvalidCharacter { .. } =>
-        write!(f, "encountered character is not in the specified character set"),
+      ScannerError::FieldTooLong =>
+        write!(f, "field length exceeds the length of the un-processed input"),
+      ScannerError::ValidationFailed =>
+        write!(f, "unable to validate the data in the field"),
     }
   }
 }
@@ -101,131 +48,128 @@ impl<'a> Scanner<'a> {
     }
   }
 
-  /// Returns `true` if the scanner has reached the end of the input.
-  #[inline]
-  pub fn is_at_end(&self) -> bool {
-    self.offset >= self.input.len()
-  }
-
   /// Returns a substring representing the unprocessed part of the input.
   #[inline]
   fn remaining(&self) -> &'a str {
     &self.input[self.offset .. ]
   }
 
-  /// Advances over the specified number of bytes of input returning the
-  /// character range to which it corresponds.
-  ///
-  /// # Panics
-  /// Will panic if attempting to advance over the end of the string.
+  /// Returns the number of characters left to process.
   #[inline]
-  fn advance_by(&mut self, bytes: usize) {
-    assert!(self.remaining().len() >= bytes, "Attempting to advance past the end of the string.");
-    self.offset += bytes
+  pub fn remaining_len(&self) -> usize {
+    self.input.len().saturating_sub(self.offset)
   }
 
-  /// Obtains a substring of exactly `characters` or an error.
-  /// Does not advance the scan offset.
-  fn peek(&self, characters: usize) -> Option<&'a str> {
-    let substring_bytes = self.remaining()
-      .chars()
-      .take(characters)
-      .map(|c| c.len_utf8())
-      .sum();
-    let substring = &self.remaining()[ .. substring_bytes];
-    if substring.chars().count() == characters {
-      Some(substring)
-    } else {
-      None
-    }
+  /// Returns `true` if the scanner has reached the end of the input.
+  #[inline]
+  pub fn is_at_end(&self) -> bool {
+    self.remaining_len() == 0
   }
 
-  /// Scans a specific character, returns `true` if consumed.
-  pub fn scan_character(&mut self, character: char) -> bool {
-    if let Some(character) = self.remaining().chars().next() {
-      self.advance_by(character.len_utf8());
-      true
-    } else {
-      false
-    }
-  }
+  /// Attempts to scan a field with an explicit length.
+  /// 
+  /// # Panics
+  /// Will panic if attempting to scan the wrong number of characters for a fixed-length field.
+  /// Will panic if attempting to scan zero bytes.
+  pub fn scan_field_len(&mut self, field: field::Field, length: usize, strict: bool) -> Result<&'a str, ScannerError> {
+    assert!(length > 0 && (field.len() == 0 || field.len() == length));
 
-  /// Scans a single character in the IATA 'f' character set.
-  pub fn scan_character_from_set(&mut self, set: CharacterSet) -> Result<char, ScannerError> {
-    let next_char = self.remaining()
-      .chars()
-      .next()
-      .ok_or(ScannerError::FieldLongerThanRemainingInput)?;
-
-    if !set.contains(next_char) {
-      return Err(ScannerError::InvalidCharacter { value: next_char, set: set });
+    if self.remaining_len() < length {
+      return Err(ScannerError::FieldTooLong);
     }
 
-    self.advance_by(next_char.len_utf8());
+    // Extract the requested substring and advance the scanner.
+    let substring = &self.remaining()[ .. length];
+    self.offset += length;
 
-    Ok(next_char)
-  }
+    // If Strict mode is requsted, validate the field.
+    if strict {
+      let validated = match field.data_format() {
 
-  /// Scans an arbitrary input string of exactly `characters` in length.
-  /// If found, a reference to the substring is returned.
-  pub fn scan_characters_from_set(&mut self, characters: usize, set: CharacterSet) -> Result<&str, ScannerError> {
-    let substring = self.peek(characters).ok_or(ScannerError::FieldLongerThanRemainingInput)?;
+        // Arbitrary or alphanumerical fields can contain any valid ASCII characters.
+        field::DataFormat::Arbitrary =>
+          substring.is_ascii(),
+        field::DataFormat::IataAlphaNumerical =>
+          substring.is_ascii(),
+        
+        // Numerical fields must either be all spaces or zero padded.
+        field::DataFormat::IataNumerical =>
+          substring.chars().all(|c| c == ' ') || substring.chars().all(|c| c.is_ascii_digit()),
+        field::DataFormat::IataNumericalHexadecimal =>
+          substring.chars().all(|c| c == ' ') || substring.chars().all(|c| c.is_ascii_hexdigit() && c.is_uppercase()),
 
-    // Validate that all characters in the string are in the set.
-    let first_invalid = substring
-      .chars()
-      .filter(|&c| !set.contains(c))
-      .next();
-    if let Some(invalid_character) = first_invalid {
-      return Err(ScannerError::InvalidCharacter { value: invalid_character, set: set });
+        // Alphabetical fields can contain a mix of uppercase ASCII characters and spaces.
+        field::DataFormat::IataAlphabetical =>
+          substring.chars().all(|c| c == ' ' || c.is_ascii_uppercase()),
+        
+        // A literal must have a single character matching the specified value.
+        field::DataFormat::Literal(literal) =>
+          (substring.len() == 1) && substring.chars().all(|c| c == literal),
+
+        // A flight number can be all spaces or match the format 'NNNN[a]'.
+        field::DataFormat::FlightNumber => {
+          if substring.len() != 5 {
+            false
+          } else {
+            // The field may be all spaces.
+            if substring.chars().all(|c| c == ' ') {
+              true
+            } else {
+              let numeric_portion_valid = substring[ .. 4].chars().all(|c| c.is_ascii_digit());
+              let optional_alphabetic_portion_valid = substring[4 .. 5].chars().all(|c| c == ' ' || c.is_ascii_uppercase());
+              numeric_portion_valid && optional_alphabetic_portion_valid
+            }
+          }
+        }
+
+        // A seat number can be all spaces or match the format 'NNNa'.
+        field::DataFormat::SeatNumber => {
+          if substring.len() != 4 {
+            false
+          } else {
+            // The field may be all spaces.
+            if substring.chars().all(|c| c == ' ') {
+              true
+            } else {
+              let numeric_portion_valid = substring[ .. 3].chars().all(|c| c.is_ascii_digit());
+              let alphabetic_portion_valid = substring[3 .. 4].chars().all(|c| c.is_ascii_uppercase());
+              numeric_portion_valid && alphabetic_portion_valid
+            }
+          }
+        }
+
+        // A check-in sequence number can be all spaces or match the format 'NNNN[f]'.
+        field::DataFormat::CheckInSequenceNumber => {
+          if substring.len() != 5 {
+            false
+          } else {
+            // The field may be all spaces.
+            if substring.chars().all(|c| c == ' ') {
+              true
+            } else {
+              let numeric_portion_valid = substring[ .. 4].chars().all(|c| c.is_ascii_digit());
+              let optional_alphanumeric_portion_valid = substring[4 .. 5].chars().all(|c| c.is_ascii());
+              numeric_portion_valid && optional_alphanumeric_portion_valid
+            }
+          }
+        }
+
+      };
+
+      if !validated {
+        return Err(ScannerError::ValidationFailed);
+      }
     }
-
-    self.advance_by(substring.len());
 
     Ok(substring)
   }
 
-  /// Scans a positive numeric input string of exactly `characters` in length,
-  /// in the given character set, with the specified radix.
-  /// The string may be zero-padded.
-  /// If found, the parsed value is returned.
-  fn scan_numeric(&mut self, characters: usize, set: CharacterSet, radix: u32) -> Result<u64, ScannerError> {
-    let slice = self.peek(characters).ok_or(ScannerError::FieldLongerThanRemainingInput)?;
-
-    // Validate that all characters in the string are IATA type 'N'.
-    let first_invalid = slice
-      .chars()
-      .filter(|&c| !set.contains(c))
-      .next();
-    if let Some(invalid_character) = first_invalid {
-      return Err(ScannerError::InvalidCharacter {
-        value: invalid_character,
-        set: CharacterSet::IataNumerical,
-      });
-    }
-
-    // Parse the number.
-    let decimal = u64::from_str_radix(slice, radix).map_err(|_| {
-      ScannerError::NumericLiteralOutOfRange
-    })?;
-    
-    self.advance_by(slice.len());
-
-    Ok(decimal)
-  }
-
-  /// Scans a positive numeric input string of exactly `characters` in length.
-  /// The string may be zero-padded.
-  /// If found, the parsed value is returned.
-  pub fn scan_decimal(&mut self, characters: usize) -> Result<u64, ScannerError> {
-    self.scan_numeric(characters, CharacterSet::IataNumerical, 10)
-  }
-
-  /// Scans a positive hexadecimal numeric input string of exactly `characters` in length.
-  /// The string may be zero-padded.
-  /// If found, the parsed value is returned.
-  pub fn scan_hexadecimal(&mut self, characters: usize) -> Result<u64, ScannerError> {
-    self.scan_numeric(characters, CharacterSet::IataNumericalHexadecimal, 16)
+  /// Attempts to scan a field using the default length.
+  /// 
+  /// # Panics
+  /// Will panic if attempting to scan a variable-length field.
+  pub fn scan_field(&mut self, field: field::Field, strict: bool) -> Result<&'a str, ScannerError> {
+    self.scan_field_len(field, field.len(), strict)
   }
 
 }

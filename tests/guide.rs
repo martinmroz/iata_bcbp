@@ -18,10 +18,7 @@ fn test_ba_example_p19() {
   const DATA: &str = "M1LEOPOLD/EMR         EZQ7O92 GVALHRBA 00723319C002F00009100";
   let boarding_pass = str::parse::<Bcbp>(DATA).unwrap();
   print!("{:?}", &boarding_pass);
-
-  // Ensure the 
-  assert_eq!(boarding_pass.passenger_name, "LEOPOLD/EMR");
-  assert_eq!(boarding_pass.is_eticket, false);
+  assert!(false);
 }
 
 #[test]
@@ -29,8 +26,7 @@ fn test_b2_bcbp_printed_at_kiosk() {
   // This example comes from page 53 of the implementation guide.
   // This is a BCBP document printed at a kiosk.
   const DATA: &str = "M1ASKREN/TEST         EA272SL ORDNRTUA 0881 007F002K0303 15C>3180 K6007BUA              2901624760758980 UA UA EY975897            *30600    09  UAG    ";
-
   let boarding_pass = str::parse::<Bcbp>(DATA).unwrap();
   print!("{:?}", &boarding_pass);
-  assert_eq!(boarding_pass.is_eticket, false);
+  assert!(false);
 }
