@@ -23,62 +23,6 @@ pub enum DataFormat {
   CheckInSequenceNumber,
 }
 
-pub trait DataFormatValidation {
-  /// Returns `true` if the receiver matches the given `format`.
-  fn conforms_to(&self, format: DataFormat) -> bool;
-}
-
-impl DataFormatValidation for str {
-  fn conforms_to(&self, format: DataFormat) -> bool {
-    match format {
-
-      // Simple field types.
-      DataFormat::Arbitrary =>
-        self.chars().all(|c| c.is_ascii()),
-      DataFormat::IataAlphaNumerical =>
-        self.chars().all(|c| c.is_ascii()),
-      DataFormat::IataNumerical =>
-        self.chars().all(|c| c.is_ascii_digit()),
-      DataFormat::IataAlphabetical =>
-        self.chars().all(|c| c.is_ascii_uppercase()),
-
-      // A flight number matches the format 'NNNN[a]'.
-      DataFormat::FlightNumber => {
-        if self.len() != 5 {
-          false
-        } else {
-          let numeric_valid = self[ .. 4].chars().all(|c| c.is_ascii_digit());
-          let optional_alphabetic_valid = self[4 .. 5].chars().all(|c| c == ' ' || c.is_ascii_uppercase());
-          numeric_valid && optional_alphabetic_valid
-        }
-      }
-
-      // A seat number matches the format 'NNNa'.
-      DataFormat::SeatNumber => {
-        if self.len() != 4 {
-          false
-        } else {
-          let numeric_valid = self[ .. 4].chars().all(|c| c.is_ascii_digit());
-          let alphabetic_valid = self[4 .. 5].chars().all(|c| c.is_ascii_uppercase());
-          numeric_valid && alphabetic_valid
-        }
-      }
-
-      // A check-in sequence matches the format 'NNNN[f]'.
-      DataFormat::CheckInSequenceNumber => {
-        if self.len() != 5 {
-          false
-        } else {
-          let numeric_valid = self[ .. 4].chars().all(|c| c.is_ascii_digit());
-          let ascii_valid = self[4 .. 5].chars().all(|c| c.is_ascii());
-          numeric_valid && ascii_valid
-        }
-      }
-
-    }
-  }
-}
-
 #[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Debug,Hash)]
 pub enum Field {
   /// Item 1: Format Code. 1 byte. Data Type 'f'.
@@ -457,6 +401,6 @@ impl Field {
 
 impl fmt::Display for Field {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{} ({})", self.name(), self.item_number())
+    write!(f, "({:03}) {}", self.item_number(), self.name())
   }
 }
