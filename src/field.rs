@@ -73,7 +73,7 @@ pub enum Field {
   TypeOfSecurityData,
   /// Item 29: Length of Security Data. 2 bytes. Data Type 'f'. Hexadecimal.
   LengthOfSecurityData,
-  /// Item 30: Security Data. n bytes. Data Type 'f'.
+  /// Item 30: Security Data. 100 bytes. Data Type 'f'.
   SecurityData,
   /// Item 31: First Non-Consecutive Baggage Tag License Plate Number. 13 bytes. Data Type 'f'.
   FirstNonConsecutiveBaggageTagLicensePlateNumber,
@@ -191,7 +191,7 @@ impl Field {
       Field::FromCityAirportCode => 3,
       Field::TypeOfSecurityData => 1,
       Field::LengthOfSecurityData => 2,
-      Field::SecurityData => 0,
+      Field::SecurityData => 100,
       Field::FirstNonConsecutiveBaggageTagLicensePlateNumber => 13,
       Field::SecondNonConsecutiveBaggageTagLicensePlateNumber => 13,
       Field::ToCityAirportCode => 3,
