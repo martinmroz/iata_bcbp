@@ -1,0 +1,6 @@
+[package]
+name = "iata_bcbp"
+version = "0.1.0"
+authors = ["Martin Mroz <martinmroz@gmail.com>"]
+
+[dependencies]
