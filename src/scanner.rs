@@ -7,11 +7,14 @@ use std::error;
 use std::fmt;
 
 use field;
+use field::DataFormatValidation;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ScannerError {
   /// The requested field is longer than the un-processed input.
   FieldTooLong,
+  /// Required Field Empty.
+  RequiredFieldEmpty,
   /// Unable to validate the field.
   ValidationFailed,
 }
@@ -23,6 +26,8 @@ impl fmt::Display for ScannerError {
     match self {
       ScannerError::FieldTooLong =>
         write!(f, "field length exceeds the length of the un-processed input"),
+      ScannerError::RequiredFieldEmpty =>
+        write!(f, "the field was marked as required however it contains no data"),
       ScannerError::ValidationFailed =>
         write!(f, "unable to validate the data in the field"),
     }
@@ -67,11 +72,12 @@ impl<'a> Scanner<'a> {
   }
 
   /// Attempts to scan a field with an explicit length.
+  /// Leading and trailing whitespace will be trimmed off.
   /// 
   /// # Panics
   /// Will panic if attempting to scan the wrong number of characters for a fixed-length field.
   /// Will panic if attempting to scan zero bytes.
-  pub fn scan_field_len(&mut self, field: field::Field, length: usize, strict: bool) -> Result<&'a str, ScannerError> {
+  pub fn scan_field_len(&mut self, field: field::Field, length: usize, required: bool, strict: bool) -> Result<&'a str, ScannerError> {
     assert!(length > 0 && (field.len() == 0 || field.len() == length));
 
     if self.remaining_len() < length {
@@ -82,94 +88,30 @@ impl<'a> Scanner<'a> {
     let substring = &self.remaining()[ .. length];
     self.offset += length;
 
+    // If the field is required, it cannot be empty.
+    if required {
+      if substring.chars().all(|c| c == ' ') {
+        return Err(ScannerError::RequiredFieldEmpty);
+      }
+    }
+
     // If Strict mode is requsted, validate the field.
     if strict {
-      let validated = match field.data_format() {
-
-        // Arbitrary or alphanumerical fields can contain any valid ASCII characters.
-        field::DataFormat::Arbitrary =>
-          substring.is_ascii(),
-        field::DataFormat::IataAlphaNumerical =>
-          substring.is_ascii(),
-        
-        // Numerical fields must either be all spaces or zero padded.
-        field::DataFormat::IataNumerical =>
-          substring.chars().all(|c| c == ' ') || substring.chars().all(|c| c.is_ascii_digit()),
-        field::DataFormat::IataNumericalHexadecimal =>
-          substring.chars().all(|c| c == ' ') || substring.chars().all(|c| c.is_ascii_hexdigit() && c.is_uppercase()),
-
-        // Alphabetical fields can contain a mix of uppercase ASCII characters and spaces.
-        field::DataFormat::IataAlphabetical =>
-          substring.chars().all(|c| c == ' ' || c.is_ascii_uppercase()),
-        
-        // A literal must have a single character matching the specified value.
-        field::DataFormat::Literal(literal) =>
-          (substring.len() == 1) && substring.chars().all(|c| c == literal),
-
-        // A flight number can be all spaces or match the format 'NNNN[a]'.
-        field::DataFormat::FlightNumber => {
-          if substring.len() != 5 {
-            false
-          } else {
-            // The field may be all spaces.
-            if substring.chars().all(|c| c == ' ') {
-              true
-            } else {
-              let numeric_portion_valid = substring[ .. 4].chars().all(|c| c.is_ascii_digit());
-              let optional_alphabetic_portion_valid = substring[4 .. 5].chars().all(|c| c == ' ' || c.is_ascii_uppercase());
-              numeric_portion_valid && optional_alphabetic_portion_valid
-            }
-          }
-        }
-
-        // A seat number can be all spaces or match the format 'NNNa'.
-        field::DataFormat::SeatNumber => {
-          if substring.len() != 4 {
-            false
-          } else {
-            // The field may be all spaces.
-            if substring.chars().all(|c| c == ' ') {
-              true
-            } else {
-              let numeric_portion_valid = substring[ .. 3].chars().all(|c| c.is_ascii_digit());
-              let alphabetic_portion_valid = substring[3 .. 4].chars().all(|c| c.is_ascii_uppercase());
-              numeric_portion_valid && alphabetic_portion_valid
-            }
-          }
-        }
-
-        // A check-in sequence number can be all spaces or match the format 'NNNN[f]'.
-        field::DataFormat::CheckInSequenceNumber => {
-          if substring.len() != 5 {
-            false
-          } else {
-            // The field may be all spaces.
-            if substring.chars().all(|c| c == ' ') {
-              true
-            } else {
-              let numeric_portion_valid = substring[ .. 4].chars().all(|c| c.is_ascii_digit());
-              let optional_alphanumeric_portion_valid = substring[4 .. 5].chars().all(|c| c.is_ascii());
-              numeric_portion_valid && optional_alphanumeric_portion_valid
-            }
-          }
-        }
-
-      };
-
-      if !validated {
+      if !substring.conforms_to(field.data_format()) {
         return Err(ScannerError::ValidationFailed);
       }
     }
 
-    Ok(substring)
+    Ok(substring.trim())
   }
 
   /// Attempts to scan a field using the default length.
+  /// Leading and trailing whitespace will be trimmed off.
   /// 
   /// # Panics
   /// Will panic if attempting to scan a variable-length field.
-  pub fn scan_field(&mut self, field: field::Field, strict: bool) -> Result<&'a str, ScannerError> {
-    self.scan_field_len(field, field.len(), strict)
+  pub fn scan_field(&mut self, field: field::Field, required: bool, strict: bool) -> Result<&'a str, ScannerError> {
+    self.scan_field_len(field, field.len(), required, strict)
   }
 
 }
