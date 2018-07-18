@@ -79,22 +79,32 @@ struct Parser<'a> {
   target: Bcbp,
 }
 
-macro_rules! parse_fields {
-  ($scanner:expr, $target_map:expr, $strict:expr, $fields:expr) => {
-    for &field in $fields.iter() {
-      let value = $scanner
-        .scan_field(field, $strict)
-        .map(String::from)
-        .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?;
-      $target_map.insert(field, value);
-    }
-  };
+/// Parses all of the given sequential fields.
+/// An error occurs if a field fails to scan properly and completely.
+fn collect_required_fields(
+  scanner: &mut Scanner,
+  strict: bool,
+  fields: &[Field],
+) -> Result<HashMap<Field, String>, BcbpParserError> {
+  let mut scanned_fields = HashMap::new();
+
+  for &field in fields {
+    let value = scanner
+      .scan_field(field, strict)
+      .map(String::from)
+      .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?;
+    scanned_fields.insert(field, value);
+  }
+
+  Ok(scanned_fields)
 }
 
 /// Parses as many of the given sequential fields as possible until the scanner runs out of input.
-/// An error occurs if a field fails to scan properly or if the scanner runs out of input before
-/// the list of fields is exhaused and the number of bytes remaining is more than zero and less
-/// than the number of bytes required for the next field.
+/// An error occurs if: 
+/// * A field fails to scan properly OR
+/// * The scanner runs out of input before the list of fields is exhausted AND
+///   * the number of bytes remaining is more than zero AND
+///   * the number of bytes remaining is less than the number of bytes required for the next field.
 fn collect_conditional_fields(
   scanner: &mut Scanner,
   strict: bool,
@@ -167,17 +177,17 @@ impl<'a> Parser<'a> {
     }
     
     // Scan the root-level mandatory items (they are permitted to be empty).
-    parse_fields![self.scanner, self.target.unique_fields, self.strict, &[
+    self.target.unique_fields = collect_required_fields(&mut self.scanner, self.strict, &[
       Field::PassengerName,
       Field::ElectronicTicketIndicator,
-    ]];
+    ])?;
 
     // Scan each encoded leg.
     for leg_index in 0 .. legs_encoded {
       let mut leg = Leg { fields: HashMap::new() };
 
       // Scan the mandatory elements of a leg.
-      parse_fields![self.scanner, leg.fields, self.strict, &[
+      leg.fields = collect_required_fields(&mut self.scanner, self.strict, &[
         Field::OperatingCarrierPnrCode,
         Field::FromCityAirportCode,
         Field::ToCityAirportCode,
@@ -188,7 +198,7 @@ impl<'a> Parser<'a> {
         Field::SeatNumber,
         Field::CheckInSequenceNumber,
         Field::PassengerStatus,
-      ]];
+      ])?;
 
       // A conditional section follows.
       let conditional_fields_len = {
