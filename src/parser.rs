@@ -30,6 +30,8 @@ pub enum BcbpParserError {
   InvalidStartOfVersionNumber,
   /// The variable size field is longer than the remaining BCBP data.
   VariableLengthFieldTooLong,
+  /// The conditional item list does not match the expected field list.
+  InvalidConditionalItemList,
 }
 
 impl error::Error for BcbpParserError {
@@ -61,6 +63,8 @@ impl fmt::Display for BcbpParserError {
         write!(f, "invalid start of version number marker"),
       &BcbpParserError::VariableLengthFieldTooLong =>
         write!(f, "length of variable field exceeds length of remaining input"),
+      &BcbpParserError::InvalidConditionalItemList =>
+        write!(f, "conditional item list invalid"),
     }
   }
 }
@@ -85,6 +89,38 @@ macro_rules! parse_fields {
       $target_map.insert(field, value);
     }
   };
+}
+
+/// Parses as many of the given sequential fields as possible until the scanner runs out of input.
+/// An error occurs if a field fails to scan properly or if the scanner runs out of input before
+/// the list of fields is exhaused and the number of bytes remaining is more than zero and less
+/// than the number of bytes required for the next field.
+fn collect_conditional_fields(
+  scanner: &mut Scanner,
+  strict: bool,
+  fields: &[Field],
+) -> Result<HashMap<Field, String>, BcbpParserError> {
+  let mut scanned_fields = HashMap::new();
+
+  // Parse conditional fields until either the scanner runs out of input or the list
+  // of fields is exhausted, either of which may happen as either the BCBP
+  // does not include all optional fields or future versions of the standard
+  // add additional fields.
+  for &field in fields {
+    if scanner.remaining_len() == 0 {
+      return Ok(scanned_fields);
+    } else if scanner.remaining_len() < field.len() {
+      return Err(BcbpParserError::InvalidConditionalItemList);
+    } else {
+      let value = scanner
+        .scan_field(field, strict)
+        .map(String::from)
+        .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?;
+      scanned_fields.insert(field, value);
+    }
+  }
+
+  Ok(scanned_fields)
 }
 
 impl<'a> Parser<'a> {
@@ -155,7 +191,7 @@ impl<'a> Parser<'a> {
       ]];
 
       // A conditional section follows.
-      let variable_size_field_length = {
+      let conditional_fields_len = {
         let field = Field::FieldSizeOfVariableSizeField;
         self.scanner
           .scan_field(field, true)
@@ -163,42 +199,93 @@ impl<'a> Parser<'a> {
           .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?
       };
 
-      // Newer versions of the BCBP format will add additional fields beyond the
-      // ones this parser knows about at the end of the variable size section.
-      // This tracks how much of the variable field is parsed successfully
-      // so the rest can be advanced over.
-      let mut variable_size_field_bytes_left = self.scanner.remaining_len();
-      if variable_size_field_bytes_left < variable_size_field_length {
-        return Err(BcbpParserError::VariableLengthFieldTooLong);
-      }
+      // Conditional fields section.
+      if conditional_fields_len > 0 {
+        let mut conditional_fields_scanner = self.scanner
+          .scan_field_list(conditional_fields_len)
+          .map_err(|_| BcbpParserError::VariableLengthFieldTooLong )?;
 
-      // If this is the first leg, some additional unique data follows.
-      if leg_index == 0 {
-        let marker_field = Field::BeginningOfVersionNumber;
-        let marker = self.scanner
-          .scan_field(marker_field, true)
-          .map_err(|e| BcbpParserError::UnableToReadField { field: marker_field, reason: e } )?;
-        if marker != ">" {
-          return Err(BcbpParserError::InvalidStartOfVersionNumber);
+        // Collect unique conditional fields.
+        if leg_index == 0 {
+          let marker_field = Field::BeginningOfVersionNumber;
+          let marker = conditional_fields_scanner
+            .scan_field(marker_field, true)
+            .map_err(|e| BcbpParserError::UnableToReadField { field: marker_field, reason: e } )?;
+          if marker != ">" {
+            return Err(BcbpParserError::InvalidStartOfVersionNumber);
+          }
+
+          // The version number is not particularly relevant at this point.
+          let _ = conditional_fields_scanner.scan_field(Field::VersionNumber, true);
+
+          // A nested structure of unique conditional fields may follow.
+          let unique_conditional_fields_len = {
+            let field = Field::FieldSizeOfStructuredMessageUnique;
+            conditional_fields_scanner
+              .scan_field(field, true)
+              .map(|n| usize::from_str_radix(n, 16).unwrap_or(0) )
+              .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?
+          };
+
+          // Collect all the provided unique conditional fields.
+          if unique_conditional_fields_len > 0 {
+            let mut unique_conditional_fields_scanner = conditional_fields_scanner
+              .scan_field_list(unique_conditional_fields_len)
+              .map_err(|_| BcbpParserError::VariableLengthFieldTooLong )?;
+            let fields = collect_conditional_fields(&mut unique_conditional_fields_scanner, self.strict, &[
+              Field::PassengerDescription,
+              Field::SourceOfCheckIn,
+              Field::SourceOfBoardingPassIssuance,
+              Field::DateOfIssueOfBoardingPass,
+              Field::DocumentType,
+              Field::AirlineDesignatorOfBoardingPassIssuer,
+              Field::BaggageTagLicensePlateNumbers,
+              Field::FirstNonConsecutiveBaggageTagLicensePlateNumber,
+              Field::SecondNonConsecutiveBaggageTagLicensePlateNumber,
+            ])?;
+            self.target.unique_fields.extend(fields);
+          }
         }
 
-        // The version number is not particularly relevant at this point.
-        let _ = self.scanner.scan_field(Field::VersionNumber, true);
-
-        // A nested structure follows.
-        let variable_size_unique_length = {
-          let field = Field::FieldSizeOfStructuredMessageUnique;
-          self.scanner
+        // A nested structure of repeated conditional fields may follow.
+        let repeated_conditional_fields_len = {
+          let field = Field::FieldSizeOfStructuredMessageRepeated;
+          conditional_fields_scanner
             .scan_field(field, true)
             .map(|n| usize::from_str_radix(n, 16).unwrap_or(0) )
             .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?
         };
 
-        let mut variable_size_unique_bytes_left = self.scanner.remaining_len();
-        if variable_size_unique_bytes_left < variable_size_unique_length {
-          return Err(BcbpParserError::VariableLengthFieldTooLong);
+        // Collect repeated conditional fields.
+        if repeated_conditional_fields_len > 0 {
+          let mut repeated_conditional_fields_scanner = conditional_fields_scanner
+            .scan_field_list(repeated_conditional_fields_len)
+            .map_err(|_| BcbpParserError::VariableLengthFieldTooLong )?;
+          let fields = collect_conditional_fields(&mut repeated_conditional_fields_scanner, self.strict, &[
+            Field::AirlineNumericCode,
+            Field::DocumentFormSerialNumber,
+            Field::SelecteeIndicator,
+            Field::InternationalDocumentVerification,
+            Field::MarketingCarrierDesignator,
+            Field::FrequentFlyerAirlineDesignator,
+            Field::FrequentFlyerNumber,
+            Field::IdAdIndicator,
+            Field::FreeBaggageAllowance,
+            Field::FastTrack,
+          ])?;
+          leg.fields.extend(fields);
         }
-        
+
+        // If there are any bytes left, they are for airline use.
+        if conditional_fields_scanner.remaining_len() > 0 {
+          let field = Field::AirlineIndividualUse;
+          let airline_use_len = conditional_fields_scanner.remaining_len();
+          let airline_use = conditional_fields_scanner
+            .scan_field_len(field, airline_use_len, self.strict)
+            .map(String::from)
+            .map_err(|e| BcbpParserError::UnableToReadField { field: field, reason: e } )?;
+          leg.fields.insert(field, airline_use);
+        }
       }
 
       self.target.legs.push(leg);

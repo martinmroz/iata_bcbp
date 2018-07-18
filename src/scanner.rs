@@ -145,7 +145,6 @@ impl<'a> Scanner<'a> {
   }
 
   /// Attempts to scan a field with an explicit length.
-  /// Leading and trailing whitespace will be trimmed off.
   /// 
   /// # Panics
   /// Will panic if attempting to scan the wrong number of characters for a fixed-length field.
@@ -156,7 +155,7 @@ impl<'a> Scanner<'a> {
     print!("[TRACE] {} ", field);
 
     if self.remaining_len() < length {
-      println!("<FAILED: Field Too Long>");
+      println!("<FAILED: Field Too Long> remaining={} requested={}", self.remaining_len(), length);
       return Err(ScannerError::FieldTooLong);
     }
 
@@ -173,8 +172,8 @@ impl<'a> Scanner<'a> {
       }
     }
 
-    println!("is '{}'", substring.trim());
-    Ok(substring.trim())
+    println!("is '{}'", substring);
+    Ok(substring)
   }
 
   /// Attempts to scan a field using the default length.
