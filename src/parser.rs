@@ -105,7 +105,7 @@ fn collect_required_fields(
 /// * The scanner runs out of input before the list of fields is exhausted AND
 ///   * the number of bytes remaining is more than zero AND
 ///   * the number of bytes remaining is less than the number of bytes required for the next field.
-fn collect_conditional_fields(
+fn collect_optional_fields(
   scanner: &mut Scanner,
   strict: bool,
   fields: &[Field],
@@ -242,7 +242,7 @@ impl<'a> Parser<'a> {
             let mut unique_conditional_fields_scanner = conditional_fields_scanner
               .scan_field_list(unique_conditional_fields_len)
               .map_err(|_| BcbpParserError::VariableLengthFieldTooLong )?;
-            let fields = collect_conditional_fields(&mut unique_conditional_fields_scanner, self.strict, &[
+            let fields = collect_optional_fields(&mut unique_conditional_fields_scanner, self.strict, &[
               Field::PassengerDescription,
               Field::SourceOfCheckIn,
               Field::SourceOfBoardingPassIssuance,
@@ -271,7 +271,7 @@ impl<'a> Parser<'a> {
           let mut repeated_conditional_fields_scanner = conditional_fields_scanner
             .scan_field_list(repeated_conditional_fields_len)
             .map_err(|_| BcbpParserError::VariableLengthFieldTooLong )?;
-          let fields = collect_conditional_fields(&mut repeated_conditional_fields_scanner, self.strict, &[
+          let fields = collect_optional_fields(&mut repeated_conditional_fields_scanner, self.strict, &[
             Field::AirlineNumericCode,
             Field::DocumentFormSerialNumber,
             Field::SelecteeIndicator,
