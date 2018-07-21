@@ -21,10 +21,6 @@ pub enum DataFormat {
   IataAlphabetical,
   /// A flight number with format specifier 'NNNN[a]'.
   FlightNumber,
-  /// A seat number with format specifier 'NNNa'.
-  SeatNumber,
-  /// A check-in sequence number with format specifier 'NNNN[f]'.
-  CheckInSequenceNumber,
 }
 
 #[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Debug,Hash)]
@@ -95,9 +91,9 @@ pub enum Field {
   CompartmentCode,
   /// Item 89: Electronic Ticket Indicator. 1 byte. Data Type 'f'.
   IdAdIndicator,
-  /// Item 104: Seat Number. 4 bytes. Data Type 'NNNa'.
+  /// Item 104: Seat Number. 4 bytes. Data Type is usually 'NNNa', but can be 'INF ' or similar.
   SeatNumber,
-  /// Item 107: Check-In Sequence Number. 5 bytes. Data Type 'NNNN[f]'.
+  /// Item 107: Check-In Sequence Number. 5 bytes. Data Type is usually 'NNNN[f]', but can be 'f'.
   CheckInSequenceNumber,
   /// Item 108: International Document Verification. 1 byte. Data Type 'f'.
   InternationalDocumentVerification,
@@ -379,9 +375,9 @@ impl Field {
       Field::IdAdIndicator =>
         DataFormat::IataAlphaNumerical,
       Field::SeatNumber =>
-        DataFormat::SeatNumber,
+        DataFormat::IataAlphaNumerical,
       Field::CheckInSequenceNumber =>
-        DataFormat::CheckInSequenceNumber,
+        DataFormat::IataAlphaNumerical,
       Field::InternationalDocumentVerification =>
         DataFormat::IataAlphaNumerical,
       Field::PassengerStatus =>

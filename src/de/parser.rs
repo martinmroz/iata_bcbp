@@ -37,28 +37,6 @@ impl DataFormatValidation for str {
                 }
             }
 
-            // A seat number matches the format 'NNNa'.
-            field::DataFormat::SeatNumber => {
-                if self.len() != 4 {
-                    false
-                } else {
-                    let has_valid_row  = self[  .. 3].chars().all(|c| c.is_ascii_digit());
-                    let has_valid_seat = self[3 .. 4].chars().all(|c| c.is_ascii_uppercase());
-                    has_valid_row && has_valid_seat
-                }
-            }
-
-            // A check-in sequence matches the format 'NNNN[f]'.
-            field::DataFormat::CheckInSequenceNumber => {
-                if self.len() != 5 {
-                    false
-                } else {
-                    let has_valid_number = self[  .. 4].chars().all(|c| c.is_ascii_digit());
-                    let has_valid_suffix = self[4 .. 5].chars().all(|c| c.is_ascii());
-                    has_valid_number && has_valid_suffix
-                }
-            }
-
         }
     }
 }
@@ -350,5 +328,9 @@ pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
         bcbp.security_data = Some(security_data);
     }
 
-    Ok(bcbp)
+    if !scanner.is_at_end() {
+        Err(Error::TrailingCharacters)
+    } else {
+        Ok(bcbp)
+    }
 }
