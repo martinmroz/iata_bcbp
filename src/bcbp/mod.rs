@@ -1,3 +1,7 @@
+// Copyright (C) 2018 Martin Mroz
+//
+// This software may be modified and distributed under the terms
+// of the MIT license.  See the LICENSE file for details.
 
 #[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
 pub struct Leg {
