@@ -145,7 +145,7 @@ impl<'a> Scanner<'a> {
     /// Will panic if `field` is variable-length.
     pub fn scan_optional_str_field(&mut self, field: field::Field) -> Result<Option<&'a str>> {
         assert!(field.len() != 0, "Attempting to scan a variable-length field as fixed-length.");
-        if self.remaining_len() == 0 {
+        if self.is_at_end() {
             Ok(None)
         } else {
             self.scan_str_field(field).map(|result| Some(result))
@@ -184,7 +184,7 @@ impl<'a> Scanner<'a> {
     /// Will panic if `field` is a length other than 1.
     pub fn scan_optional_char_field(&mut self, field: field::Field) -> Result<Option<char>> {
         assert!(field.len() == 1, "Attempting to scan a single character out of a longer field.");
-        if self.remaining_len() == 0 {
+        if self.is_at_end() {
             Ok(None)
         } else {
             self.scan_char_field(field).map(|c| Some(c))
