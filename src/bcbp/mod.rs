@@ -4,9 +4,6 @@
 // of the MIT license.  See the LICENSE file for details.
 
 mod fields;
-mod field_types;
-
-use self::field_types::*;
 
 #[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
 pub struct Leg {
