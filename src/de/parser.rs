@@ -7,51 +7,16 @@ use bcbp;
 use error::{Error, Result};
 use de::field;
 
-trait DataFormatValidation {
-    /// Returns `true` if the receiver matches the given `format`.
-    fn conforms_to(&self, format: field::DataFormat) -> bool;
-}
-
-impl DataFormatValidation for str {
-    fn conforms_to(&self, format: field::DataFormat) -> bool {
-        match format {
-
-            // Simple field types.
-            field::DataFormat::Arbitrary =>
-                self.chars().all(|c| c.is_ascii()),
-            field::DataFormat::IataAlphaNumerical =>
-                self.chars().all(|c| c.is_ascii()),
-            field::DataFormat::IataNumerical =>
-                self.chars().all(|c| c.is_ascii_digit()),
-            field::DataFormat::IataAlphabetical =>
-                self.chars().all(|c| c.is_ascii_uppercase()),
-
-            // A flight number matches the format 'NNNN[a]'.
-            field::DataFormat::FlightNumber => {
-                if self.len() != 5 {
-                    false
-                } else {
-                    let has_valid_number = self[  .. 4].chars().all(|c| c.is_ascii_digit());
-                    let has_valid_suffix = self[4 .. 5].chars().all(|c| c == ' ' || c.is_ascii_uppercase());
-                    has_valid_number && has_valid_suffix
-                }
-            }
-
-        }
-    }
-}
-
 #[derive(Clone,Eq,PartialEq,Hash,Debug)]
 struct Scanner<'a> {
     input: &'a str,
-    strict: bool,
 }
 
 impl<'a> Scanner<'a> {
 
-    /// When strict mode is enabled, extended field validation is performed.
-    pub fn new(input: &'a str, strict: bool) -> Self {
-        Scanner { input, strict }
+    /// Return a new intance of the receiver over the `input`.
+    pub fn new(input: &'a str) -> Self {
+        Scanner { input }
     }
 
     /// Returns `true` if no more input is available.
@@ -72,14 +37,15 @@ impl<'a> Scanner<'a> {
     /// 
     /// # Panics
     /// Will panic if `len` is `0`.
-    pub fn scan_sub_field_list(&mut self, len: usize) -> Result<Scanner<'a>> {
+    pub fn scan_section(&mut self, len: usize) -> Result<Scanner<'a>> {
+        println!("[TRACE] Scan Sub-Field List Length {}", len);
         assert!(len > 0, "Attempting to scan a zero-length sub-field list is not valid.");
         if self.input.len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
             let sub_fields = &self.input[ 0 .. len ];
             self.input = &self.input[ len .. ];
-            Ok(Scanner::new(sub_fields, self.strict))
+            Ok(Scanner::new(sub_fields))
         }
     }
 
@@ -90,18 +56,15 @@ impl<'a> Scanner<'a> {
     /// Will panic if `len` is `0`.
     /// Will panic if the fixed-length field intrinsic length is not equal to `len`.
     pub fn scan_str_field_len(&mut self, field: field::Field, len: usize) -> Result<&'a str> {
+        println!("[TRACE] {} (Length {})", field, len);
         assert!(len > 0, "Attempting to scan zero bytes of data.");
         assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
         if self.input.len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
             let substring = &self.input[ 0 .. len ];
-            if self.strict && !substring.conforms_to(field.data_format()) {
-                Err(Error::InvalidFieldFormat)
-            } else {
-                self.input = &self.input[ len .. ];
-                Ok(substring)
-            }
+            self.input = &self.input[ len .. ];
+            Ok(substring)
         }
     }
 
@@ -154,7 +117,7 @@ impl<'a> Scanner<'a> {
         self.scan_str_field(field)
             .map(|value| value.chars().next().unwrap() )
     }
-    
+
     /// Scans and returns an optional character value underlying a fixed-length field.
     /// If there is no more input to process, returns `Ok(None)`.
     /// 
@@ -171,12 +134,17 @@ impl<'a> Scanner<'a> {
 
 }
 
-pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
-    let mut scanner = Scanner::new(input, strict);
+pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
+    if !input.chars().all(|c| c.is_ascii()) {
+        return Err(Error::InvalidCharacters)
+    }
+
+    println!("Start of Trace.");
+    let mut scanner = Scanner::new(input);
 
     // Check that the input string is likely an M-type BCBP string.
     if scanner.scan_str_field(field::Field::FormatCode)? != "M" {
-        return Err(Error::UnsupportedEncoding);
+        return Err(Error::UnsupportedFormat);
     }
 
     // The number of legs informs the breakdown of the various field iterators.
@@ -184,9 +152,9 @@ pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
 
     // Create a parser for the mandatory unique fields.
     let mut bcbp = bcbp::Bcbp::default();
-    bcbp.passenger_name = 
+    bcbp.passenger_name =
         scanner.scan_str_field(field::Field::PassengerName)?.into();
-    bcbp.electronic_ticket_indicator = 
+    bcbp.electronic_ticket_indicator =
         scanner.scan_char_field(field::Field::ElectronicTicketIndicator)?;
 
     for leg_index in 0 .. number_of_legs_encoded {
@@ -219,7 +187,7 @@ pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
         if conditional_item_size > 0 {
  
             // Scanner over the entire set of conditional fields.
-            let mut conditional_item_scanner = scanner.scan_sub_field_list(conditional_item_size as usize)?;
+            let mut conditional_item_scanner = scanner.scan_section(conditional_item_size as usize)?;
 
             // The first leg may contain some optional fields at the root level.
             if leg_index == 0 {
@@ -240,7 +208,7 @@ pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
                 if conditional_item_scanner.remaining_len() > 0 {
                     let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageUnique, 16)?;
                     if len > 0 {
-                        let mut unique_scanner = conditional_item_scanner.scan_sub_field_list(len as usize)?;
+                        let mut unique_scanner = conditional_item_scanner.scan_section(len as usize)?;
 
                         bcbp.passenger_description =
                             unique_scanner.scan_optional_char_field(field::Field::PassengerDescription)?;
@@ -268,7 +236,7 @@ pub fn from_str_strict<'a>(input: &'a str, strict: bool) -> Result<bcbp::Bcbp> {
             if conditional_item_scanner.remaining_len() > 0 {
                 let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageRepeated, 16)?;
                 if len > 0 {
-                    let mut repeated_scanner = conditional_item_scanner.scan_sub_field_list(len as usize)?;
+                    let mut repeated_scanner = conditional_item_scanner.scan_section(len as usize)?;
 
                     leg.airline_numeric_code =
                         repeated_scanner.scan_optional_str_field(field::Field::AirlineNumericCode)?.map(Into::into);

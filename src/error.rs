@@ -11,18 +11,20 @@ use std::result;
 pub enum Error {
     /// The end of the input was reached prematurely.
     UnexpectedEndOfInput,
-    /// The format of a field could not be validated in strict mode.
-    InvalidFieldFormat,
     /// The contents of a field parsed as a numeric was not a numeric value.
     ExpectedInteger,
     /// The start-of-version-number value is not valid.
     InvalidStartOfVersionNumber,
     /// The start-of-security-data value is not valid.
     InvalidStartOfSecurityData,
-    /// The BCBP encoding is not supported.
-    UnsupportedEncoding,
+    /// The BCBP string does not contain exclusively ASCII characters.
+    InvalidCharacters,
+    /// The BCBP format is not supported.
+    UnsupportedFormat,
     /// After parsing, additional characters remain.
     TrailingCharacters,
+    /// An attempt was made to create a fixed-sized field using incorrectly sized data.
+    FieldLengthMismatch { required: usize, found: usize },
 }
 
 impl error::Error for Error {}

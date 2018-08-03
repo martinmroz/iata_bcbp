@@ -3,6 +3,11 @@
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
+mod fields;
+mod field_types;
+
+use self::field_types::*;
+
 #[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
 pub struct Leg {
     pub(crate) operating_carrier_pnr_code: String,
