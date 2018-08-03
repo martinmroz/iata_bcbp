@@ -224,10 +224,10 @@ pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
                             unique_scanner.scan_optional_str_field(field::Field::AirlineDesignatorOfBoardingPassIssuer)?.map(Into::into);
                         bcbp.baggage_tag_license_plate_numbers =
                             unique_scanner.scan_optional_str_field(field::Field::BaggageTagLicensePlateNumbers)?.map(Into::into);
-                        bcbp.first_non_consecutive_baggage_tag_license_plate_number =
-                            unique_scanner.scan_optional_str_field(field::Field::FirstNonConsecutiveBaggageTagLicensePlateNumber)?.map(Into::into);
-                        bcbp.second_non_consecutive_baggage_tag_license_plate_number =
-                            unique_scanner.scan_optional_str_field(field::Field::SecondNonConsecutiveBaggageTagLicensePlateNumber)?.map(Into::into);
+                        bcbp.first_non_consecutive_baggage_tag_license_plate_numbers =
+                            unique_scanner.scan_optional_str_field(field::Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers)?.map(Into::into);
+                        bcbp.second_non_consecutive_baggage_tag_license_plate_numbers =
+                            unique_scanner.scan_optional_str_field(field::Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers)?.map(Into::into);
                     }
                 }
             }

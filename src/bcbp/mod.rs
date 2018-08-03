@@ -221,8 +221,8 @@ pub struct Bcbp {
     pub(crate) document_type: Option<char>,
     pub(crate) airline_designator_of_boarding_pass_issuer: Option<String>,
     pub(crate) baggage_tag_license_plate_numbers: Option<String>,
-    pub(crate) first_non_consecutive_baggage_tag_license_plate_number: Option<String>,
-    pub(crate) second_non_consecutive_baggage_tag_license_plate_number: Option<String>,
+    pub(crate) first_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
+    pub(crate) second_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
     pub(crate) legs: Vec<Leg>,
     pub(crate) security_data: Option<SecurityData>,
 }
@@ -317,15 +317,15 @@ impl Bcbp {
     /// This field allows carriers who handle non-sequential bags to include a second set of them
     /// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.
     /// Spaces indicate the field is not set.
-    pub fn first_non_consecutive_baggage_tag_license_plate_number(&self) -> Option<&str> {
-        self.first_non_consecutive_baggage_tag_license_plate_number.as_ref().map(|x| &**x)
+    pub fn first_non_consecutive_baggage_tag_license_plate_numbers(&self) -> Option<&str> {
+        self.first_non_consecutive_baggage_tag_license_plate_numbers.as_ref().map(|x| &**x)
     }
 
     /// This field allows carriers who handle non-sequential bags to include a third set of them
     /// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.
     /// Spaces indicate the field is not set.
-    pub fn second_non_consecutive_baggage_tag_license_plate_number(&self) -> Option<&str> {
-        self.second_non_consecutive_baggage_tag_license_plate_number.as_ref().map(|x| &**x)
+    pub fn second_non_consecutive_baggage_tag_license_plate_numbers(&self) -> Option<&str> {
+        self.second_non_consecutive_baggage_tag_license_plate_numbers.as_ref().map(|x| &**x)
     }
 
 }

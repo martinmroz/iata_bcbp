@@ -58,9 +58,9 @@ pub enum Field {
     /// Item 30: Security Data. n bytes. Data Type 'f'.
     SecurityData,
     /// Item 31: First Non-Consecutive Baggage Tag License Plate Number. 13 bytes. Data Type 'f'.
-    FirstNonConsecutiveBaggageTagLicensePlateNumber,
+    FirstNonConsecutiveBaggageTagLicensePlateNumbers,
     /// Item 32: Second Non-Consecutive Baggage Tag License Plate Number. 13 bytes. Data Type 'f'.
-    SecondNonConsecutiveBaggageTagLicensePlateNumber,
+    SecondNonConsecutiveBaggageTagLicensePlateNumbers,
     /// Item 38: To City Airport Code. 3 bytes. Data Type 'a'.
     ToCityAirportCode,
     /// Item 42: Operating Carrier Designator. 3 bytes. Data Type 'f'.
@@ -125,8 +125,8 @@ impl Field {
             Field::TypeOfSecurityData => 1,
             Field::LengthOfSecurityData => 2,
             Field::SecurityData => 0,
-            Field::FirstNonConsecutiveBaggageTagLicensePlateNumber => 13,
-            Field::SecondNonConsecutiveBaggageTagLicensePlateNumber => 13,
+            Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers => 13,
+            Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers => 13,
             Field::ToCityAirportCode => 3,
             Field::OperatingCarrierDesignator => 3,
             Field::FlightNumber => 5,
@@ -199,9 +199,9 @@ impl Field {
                 "Length of Security Data",
             Field::SecurityData => 
                 "Security Data",
-            Field::FirstNonConsecutiveBaggageTagLicensePlateNumber => 
+            Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers =>
                 "First Non-Consecutive Baggage Tag License Plate Number",
-            Field::SecondNonConsecutiveBaggageTagLicensePlateNumber => 
+            Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers =>
                 "Second Non-Consecutive Baggage Tag License Plate Number",
             Field::ToCityAirportCode => 
                 "To City Airport Code",
