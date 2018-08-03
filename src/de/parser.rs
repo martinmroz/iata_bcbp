@@ -40,7 +40,7 @@ impl<'a> Scanner<'a> {
     pub fn scan_section(&mut self, len: usize) -> Result<Scanner<'a>> {
         println!("[TRACE] Scan Sub-Field List Length {}", len);
         assert!(len > 0, "Attempting to scan a zero-length sub-field list is not valid.");
-        if self.input.len() < len {
+        if self.remaining_len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
             let sub_fields = &self.input[ 0 .. len ];
@@ -59,7 +59,7 @@ impl<'a> Scanner<'a> {
         println!("[TRACE] {} (Length {})", field, len);
         assert!(len > 0, "Attempting to scan zero bytes of data.");
         assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
-        if self.input.len() < len {
+        if self.remaining_len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
             let substring = &self.input[ 0 .. len ];
@@ -104,7 +104,7 @@ impl<'a> Scanner<'a> {
     pub fn scan_unsigned_field(&mut self, field: field::Field, radix: u32) -> Result<u64> {
         self.scan_str_field(field)
             .and_then(|str_value| {
-                u64::from_str_radix(str_value, radix).map_err(|_| Error::ExpectedInteger )
+                u64::from_str_radix(str_value, radix).map_err(|_| Error::ExpectedInteger)
             })
     }
 
@@ -115,7 +115,7 @@ impl<'a> Scanner<'a> {
     pub fn scan_char_field(&mut self, field: field::Field) -> Result<char> {
         assert!(field.len() == 1, "Attempting to scan a single character out of a longer field.");
         self.scan_str_field(field)
-            .map(|value| value.chars().next().unwrap() )
+            .map(|value| value.chars().next().unwrap())
     }
 
     /// Scans and returns an optional character value underlying a fixed-length field.
