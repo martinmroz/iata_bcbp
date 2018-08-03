@@ -43,7 +43,7 @@ impl<'a> Scanner<'a> {
         if self.remaining_len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
-            let sub_fields = &self.input[ 0 .. len ];
+            let sub_fields = &self.input[ .. len ];
             self.input = &self.input[ len .. ];
             Ok(Scanner::new(sub_fields))
         }
@@ -62,7 +62,7 @@ impl<'a> Scanner<'a> {
         if self.remaining_len() < len {
             Err(Error::UnexpectedEndOfInput)
         } else {
-            let substring = &self.input[ 0 .. len ];
+            let substring = &self.input[ .. len ];
             self.input = &self.input[ len .. ];
             Ok(substring)
         }
