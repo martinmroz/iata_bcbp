@@ -9,18 +9,18 @@
 //! defined in IATA Resolution 792.
 //!
 //! # Example
-//! 
+//!
 //! # Installation
-//! 
+//!
 //! Add the following to your `Cargo.toml` file:
-//! 
+//!
 //! ```toml
 //! [dependencies]
 //! iata_bcbp = "0.1"
 //! ```
-//! 
+//!
 //! And to the top of your `main.rs`:
-//! 
+//!
 //! ```rs
 //! extern crate iata_bcbp;
 //! ```

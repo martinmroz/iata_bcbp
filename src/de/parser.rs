@@ -293,7 +293,7 @@ pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
             }
         }
 
-        bcbp.security_data = Some(security_data);
+        bcbp.security_data = security_data;
     }
 
     if !scanner.is_at_end() {

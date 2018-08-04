@@ -3,8 +3,6 @@
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
-mod fields;
-
 #[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
 pub struct Leg {
     pub(crate) operating_carrier_pnr_code: String,
@@ -43,7 +41,7 @@ impl Leg {
     /// Spaces indicate the field is not set.
     /// Any other values are invalid.
     pub fn from_city_airport_code(&self) -> &str {
-        &self.to_city_airport_code
+        &self.from_city_airport_code
     }
 
     /// Three-letter or four-letter IATA code of the destination airport.
@@ -224,7 +222,7 @@ pub struct Bcbp {
     pub(crate) first_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
     pub(crate) second_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
     pub(crate) legs: Vec<Leg>,
-    pub(crate) security_data: Option<SecurityData>,
+    pub(crate) security_data: SecurityData,
 }
 
 impl Bcbp {
@@ -236,8 +234,8 @@ impl Bcbp {
     }
 
     /// A reference to the optional security data used to verify a boarding pass was not tamptered with.
-    pub fn security_data(&self) -> Option<&SecurityData> {
-        self.security_data.as_ref()
+    pub fn security_data(&self) -> &SecurityData {
+        &self.security_data
     }
 
     /// Used to differentiate between an electronic ticket ('E') and another type of travel document.
