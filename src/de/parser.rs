@@ -37,11 +37,11 @@ impl<'a> Scanner<'a> {
     /// 
     /// # Panics
     /// Will panic if `len` is `0`.
-    pub fn scan_section(&mut self, len: usize) -> Result<Scanner<'a>> {
+    pub fn scan_subsection(&mut self, len: usize) -> Result<Scanner<'a>> {
         println!("[TRACE] Scan Sub-Field List Length {}", len);
         assert!(len > 0, "Attempting to scan a zero-length sub-field list is not valid.");
         if self.remaining_len() < len {
-            Err(Error::UnexpectedEndOfInput)
+            Err(Error::SubsectionTooLong)
         } else {
             let sub_fields = &self.input[ .. len ];
             self.input = &self.input[ len .. ];
@@ -60,7 +60,7 @@ impl<'a> Scanner<'a> {
         assert!(len > 0, "Attempting to scan zero bytes of data.");
         assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
         if self.remaining_len() < len {
-            Err(Error::UnexpectedEndOfInput)
+            Err(Error::UnexpectedEndOfInput(field))
         } else {
             let substring = &self.input[ .. len ];
             self.input = &self.input[ len .. ];
@@ -104,7 +104,7 @@ impl<'a> Scanner<'a> {
     pub fn scan_unsigned_field(&mut self, field: field::Field, radix: u32) -> Result<u64> {
         self.scan_str_field(field)
             .and_then(|str_value| {
-                u64::from_str_radix(str_value, radix).map_err(|_| Error::ExpectedInteger)
+                u64::from_str_radix(str_value, radix).map_err(|_| Error::ExpectedInteger(field))
             })
     }
 
@@ -134,8 +134,10 @@ impl<'a> Scanner<'a> {
 
 }
 
-pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
-    if !input.chars().all(|c| c.is_ascii()) {
+/// Parses a boarding pass from `input_data` representable as a string reference.
+pub fn from_str<I>(input_data: I) -> Result<bcbp::Bcbp> where I: AsRef<str> {
+    let input = input_data.as_ref();
+    if !input.is_ascii() {
         return Err(Error::InvalidCharacters)
     }
 
@@ -187,7 +189,7 @@ pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
         if conditional_item_size > 0 {
  
             // Scanner over the entire set of conditional fields.
-            let mut conditional_item_scanner = scanner.scan_section(conditional_item_size as usize)?;
+            let mut conditional_item_scanner = scanner.scan_subsection(conditional_item_size as usize)?;
 
             // The first leg may contain some optional fields at the root level.
             if leg_index == 0 {
@@ -208,7 +210,7 @@ pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
                 if conditional_item_scanner.remaining_len() > 0 {
                     let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageUnique, 16)?;
                     if len > 0 {
-                        let mut unique_scanner = conditional_item_scanner.scan_section(len as usize)?;
+                        let mut unique_scanner = conditional_item_scanner.scan_subsection(len as usize)?;
 
                         bcbp.passenger_description =
                             unique_scanner.scan_optional_char_field(field::Field::PassengerDescription)?;
@@ -236,7 +238,7 @@ pub fn from_str<'a>(input: &'a str) -> Result<bcbp::Bcbp> {
             if conditional_item_scanner.remaining_len() > 0 {
                 let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageRepeated, 16)?;
                 if len > 0 {
-                    let mut repeated_scanner = conditional_item_scanner.scan_section(len as usize)?;
+                    let mut repeated_scanner = conditional_item_scanner.scan_subsection(len as usize)?;
 
                     leg.airline_numeric_code =
                         repeated_scanner.scan_optional_str_field(field::Field::AirlineNumericCode)?.map(Into::into);

@@ -7,12 +7,16 @@ use std::error;
 use std::fmt;
 use std::result;
 
+use de::field;
+
 #[derive(Clone,Eq,PartialEq,Ord,PartialOrd,Hash,Debug)]
 pub enum Error {
     /// The end of the input was reached prematurely.
-    UnexpectedEndOfInput,
+    UnexpectedEndOfInput(field::Field),
+    /// The length of the subsection encoded exceeds the remaining length of the input.
+    SubsectionTooLong,
     /// The contents of a field parsed as a numeric was not a numeric value.
-    ExpectedInteger,
+    ExpectedInteger(field::Field),
     /// The start-of-version-number value is not valid.
     InvalidStartOfVersionNumber,
     /// The start-of-security-data value is not valid.
@@ -23,15 +27,30 @@ pub enum Error {
     UnsupportedFormat,
     /// After parsing, additional characters remain.
     TrailingCharacters,
-    /// An attempt was made to create a fixed-sized field using incorrectly sized data.
-    FieldLengthMismatch { required: usize, found: usize },
 }
 
 impl error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "")
+        match self {
+            &Error::UnexpectedEndOfInput(field) =>
+                write!(f, "unexpected end-of-input before {}", field),
+            &Error::SubsectionTooLong =>
+                write!(f, "subsection too long"),
+            &Error::ExpectedInteger(field) =>
+                write!(f, "the {} field is non-numeric", field),
+            &Error::InvalidStartOfVersionNumber =>
+                write!(f, "the version number field does not begin with the '>' marker"),
+            &Error::InvalidStartOfSecurityData =>
+                write!(f, "the security data section does not begin with the '^' marker"),
+            &Error::InvalidCharacters =>
+                write!(f, "non-ASCII characters"),
+            &Error::UnsupportedFormat =>
+                write!(f, "not an IATA BCBP Type M boarding pass"),
+            &Error::TrailingCharacters =>
+                write!(f, "input includes data after a valid boarding pass"),
+        }
     }
 }
 

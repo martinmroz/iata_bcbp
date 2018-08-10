@@ -5,7 +5,7 @@
 
 use std::str::FromStr;
 
-mod field;
+pub mod field;
 mod parser;
 
 use bcbp;
