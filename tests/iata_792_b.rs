@@ -109,3 +109,88 @@ fn example_2_m2_multiple_legs() {
     assert_eq!(pass_data.security_data().type_of_security_data(), Some('1'));
     assert_eq!(pass_data.security_data().security_data(), Some("GIWVC5EH7JNT684FVNJ91W2QA4DVN5J8K4F0L0GEQ3DF5TGBN8709HKT5D3DW3GBHFCVHMY7J5T6HFR41W2QA4DVN5J8K4F0L0GE"));
 }
+
+#[test]
+fn appendix_b_1_1_lh_home_printed_boarding_pass() {
+    const PASS_STR: &str = "M1TEST/HIDDEN         E8OQ6FU FRARLGLH 4010 012C004D0001 35C>2180WW6012BLH              2922023642241060 LH                        *30600000K09         ";
+    let pass_data = Bcbp::from_str(PASS_STR).unwrap();
+    assert_eq!(pass_data.passenger_name(), "TEST/HIDDEN         ");
+    assert_eq!(pass_data.electronic_ticket_indicator(), 'E');
+    assert_eq!(pass_data.legs().len(), 1);
+
+    assert_eq!(pass_data.passenger_description(), Some('0'));
+    assert_eq!(pass_data.source_of_check_in(), Some('W'));
+    assert_eq!(pass_data.source_of_boarding_pass_issuance(), Some('W'));
+    assert_eq!(pass_data.date_of_issue_of_boarding_pass(), Some("6012"));
+    assert_eq!(pass_data.document_type(), Some('B'));
+    assert_eq!(pass_data.airline_designator_of_boarding_pass_issuer(), Some("LH "));
+    assert_eq!(pass_data.baggage_tag_license_plate_numbers(), Some("             "));
+    assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
+    assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
+
+    { // Fields in leg 1 of 1.
+        let first_leg = &pass_data.legs()[0];
+        assert_eq!(first_leg.operating_carrier_pnr_code(), "8OQ6FU ");
+        assert_eq!(first_leg.from_city_airport_code(), "FRA");
+        assert_eq!(first_leg.to_city_airport_code(), "RLG");
+        assert_eq!(first_leg.operating_carrier_designator(), "LH ");
+        assert_eq!(first_leg.flight_number(), "4010 ");
+        assert_eq!(first_leg.date_of_flight(), "012");
+        assert_eq!(first_leg.compartment_code(), 'C');
+        assert_eq!(first_leg.seat_number(), "004D");
+        assert_eq!(first_leg.check_in_sequence_number(), "0001 ");
+        assert_eq!(first_leg.passenger_status(), '3');
+
+        assert_eq!(first_leg.airline_numeric_code(), Some("220"));
+        assert_eq!(first_leg.document_form_serial_number(), Some("2364224106"));
+        assert_eq!(first_leg.selectee_indicator(), Some('0'));
+        assert_eq!(first_leg.international_document_verification(), Some(' '));
+        assert_eq!(first_leg.marketing_carrier_designator(), Some("LH "));
+        assert_eq!(first_leg.frequent_flyer_airline_designator(), Some("   "));
+        assert_eq!(first_leg.frequent_flyer_number(), Some("                "));
+        assert_eq!(first_leg.id_ad_indicator(), Some(' '));
+        assert_eq!(first_leg.free_baggage_allowance(), Some("   "));
+        assert_eq!(first_leg.airline_individual_use(), Some("*30600000K09         "));
+
+        // As a Version 2 pass, the Fast Track field is not present.
+        assert_eq!(first_leg.fast_track(), None);
+    }
+}
+
+#[test]
+fn appendix_b_1_2_kl_home_printed_boarding_pass() {
+    const PASS_STR: &str = "M1TEST/PETER          E24Z5RN AMSBRUKL 1733 019M008A0001 316>503  W0D0742497067621";
+    let pass_data = Bcbp::from_str(PASS_STR).unwrap();
+    assert_eq!(pass_data.passenger_name(), "TEST/PETER          ");
+    assert_eq!(pass_data.electronic_ticket_indicator(), 'E');
+    assert_eq!(pass_data.legs().len(), 1);
+
+    assert_eq!(pass_data.passenger_description(), Some(' '));
+    assert_eq!(pass_data.source_of_check_in(), Some(' '));
+    assert_eq!(pass_data.source_of_boarding_pass_issuance(), Some('W'));
+
+    { // Fields in leg 1 of 1.
+        let first_leg = &pass_data.legs()[0];
+        assert_eq!(first_leg.operating_carrier_pnr_code(), "24Z5RN ");
+        assert_eq!(first_leg.from_city_airport_code(), "AMS");
+        assert_eq!(first_leg.to_city_airport_code(), "BRU");
+        assert_eq!(first_leg.operating_carrier_designator(), "KL ");
+        assert_eq!(first_leg.flight_number(), "1733 ");
+        assert_eq!(first_leg.date_of_flight(), "019");
+        assert_eq!(first_leg.compartment_code(), 'M');
+        assert_eq!(first_leg.seat_number(), "008A");
+        assert_eq!(first_leg.check_in_sequence_number(), "0001 ");
+        assert_eq!(first_leg.passenger_status(), '3');
+
+        assert_eq!(first_leg.airline_numeric_code(), Some("074"));
+        assert_eq!(first_leg.document_form_serial_number(), Some("2497067621"));
+    }
+}
+
+#[test]
+fn appendix_b_1_3_ua_home_printed_boarding_pass() {
+}
+
+#[test]
+fn appendix_b_1_4_british_airways_web() {
+}
