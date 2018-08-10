@@ -38,8 +38,8 @@ impl<'a> Scanner<'a> {
     /// # Panics
     /// Will panic if `len` is `0`.
     pub fn scan_subsection(&mut self, len: usize) -> Result<Scanner<'a>> {
-        println!("[TRACE] Scan Sub-Field List Length {}", len);
         assert!(len > 0, "Attempting to scan a zero-length sub-field list is not valid.");
+        trace!("Scanning Subsection (Length {})", len);
         if self.remaining_len() < len {
             Err(Error::SubsectionTooLong)
         } else {
@@ -56,14 +56,15 @@ impl<'a> Scanner<'a> {
     /// Will panic if `len` is `0`.
     /// Will panic if the fixed-length field intrinsic length is not equal to `len`.
     pub fn scan_str_field_len(&mut self, field: field::Field, len: usize) -> Result<&'a str> {
-        println!("[TRACE] {} (Length {})", field, len);
         assert!(len > 0, "Attempting to scan zero bytes of data.");
         assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
         if self.remaining_len() < len {
+            trace!("Scanning {} (Length {}) - Unexpected End of Input", field, len);
             Err(Error::UnexpectedEndOfInput(field))
         } else {
             let substring = &self.input[ .. len ];
             self.input = &self.input[ len .. ];
+            trace!("Scanning {} (Length {}) - '{}'", field, len, substring);
             Ok(substring)
         }
     }
@@ -141,7 +142,6 @@ pub fn from_str<I>(input_data: I) -> Result<bcbp::Bcbp> where I: AsRef<str> {
         return Err(Error::InvalidCharacters)
     }
 
-    println!("Start of Trace.");
     let mut scanner = Scanner::new(input);
 
     // Check that the input string is likely an M-type BCBP string.

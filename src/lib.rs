@@ -25,6 +25,9 @@
 //! extern crate iata_bcbp;
 //! ```
 
+#[macro_use]
+extern crate log;
+
 mod bcbp;
 mod de;
 mod error;
