@@ -59,7 +59,7 @@ impl<'a> Scanner<'a> {
         assert!(len > 0, "Attempting to scan zero bytes of data.");
         assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
         if self.remaining_len() < len {
-            trace!("Scanning {} (Length {}) - Unexpected End of Input", field, len);
+            trace!("Unexpected End of Input Scanning {} (Length {})", field, len);
             Err(Error::UnexpectedEndOfInput(field))
         } else {
             let substring = &self.input[ .. len ];
