@@ -29,7 +29,7 @@ fn alaska_boarding_pass() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 2.
+    { // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "XXXXXX ");
         assert_eq!(first_leg.from_city_airport_code(), "SJC");
@@ -74,7 +74,7 @@ fn air_canada_boarding_pass() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 2.
+    { // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "XXXXXX ");
         assert_eq!(first_leg.from_city_airport_code(), "YVR");
