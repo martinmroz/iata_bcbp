@@ -2,6 +2,10 @@
 name = "iata_bcbp"
 version = "0.1.0"
 authors = ["Martin Mroz <martinmroz@gmail.com>"]
+build = "build.rs"
+
+[build-dependencies]
+cbindgen = "0.6"
 
 [dependencies]
 log = "0.4"
