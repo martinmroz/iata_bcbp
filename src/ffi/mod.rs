@@ -24,6 +24,9 @@ use super::Bcbp;
 /// done with it.
 ///
 /// [`BcbpDestroy()`]: fn.BcbpDestroy.html
+/// 
+/// # Issues
+/// _: Return an error if parse fails instead of `null`.
 #[no_mangle]
 pub unsafe extern "C" fn BcbpCreateWithCString(input: *const c_char) -> *mut Bcbp {
     if input.is_null() {
@@ -80,43 +83,43 @@ pub type BcbpFieldId = c_int;
 
 /// Always `null`.
 #[no_mangle]
-pub static kBcbpFieldUnknown: BcbpFieldId = 0;
+pub static kBcbpFieldIdUnknown: BcbpFieldId = 0;
 /// The name of the passenger, required, 20 bytes.
 #[no_mangle]
-pub static kBcbpFieldPassengerName: BcbpFieldId = 1;
+pub static kBcbpFieldIdPassengerName: BcbpFieldId = 1;
 /// Electronic ticket indicator, required, 1 byte.
 #[no_mangle]
-pub static kBcbpFieldElectronicTicketIndicator: BcbpFieldId = 2;
+pub static kBcbpFieldIdElectronicTicketIndicator: BcbpFieldId = 2;
 /// Passenger description, optional, 1 byte.
 #[no_mangle]
-pub static kBcbpFieldPassengerDescription: BcbpFieldId = 3;
+pub static kBcbpFieldIdPassengerDescription: BcbpFieldId = 3;
 /// Source of check-in, optional, 1 byte.
 #[no_mangle]
-pub static kBcbpFieldSourceOfCheckIn: BcbpFieldId = 4;
+pub static kBcbpFieldIdSourceOfCheckIn: BcbpFieldId = 4;
 /// Source of boarding pass issuance, optional, 1 byte.
 #[no_mangle]
-pub static kBcbpFieldSourceOfBoardingPassIssuance: BcbpFieldId = 5;
+pub static kBcbpFieldIdSourceOfBoardingPassIssuance: BcbpFieldId = 5;
 /// Date of issue of boarding pass, optional, 4 bytes.
 #[no_mangle]
-pub static kBcbpFieldDateOfIssueOfBoardingPass: BcbpFieldId = 6;
+pub static kBcbpFieldIdDateOfIssueOfBoardingPass: BcbpFieldId = 6;
 /// Document type, optional, 1 byte.
 #[no_mangle]
-pub static kBcbpFieldDocumentType: BcbpFieldId = 7;
+pub static kBcbpFieldIdDocumentType: BcbpFieldId = 7;
 /// Airline designator of boarding pass issuer, optional, 3 bytes.
 #[no_mangle]
-pub static kBcbpFieldAirlineDesignatorOfBoardingPassIssuer: BcbpFieldId = 8;
+pub static kBcbpFieldIdAirlineDesignatorOfBoardingPassIssuer: BcbpFieldId = 8;
 /// Baggage tag license plate numbers, optional, 13 bytes.
 #[no_mangle]
-pub static kBcbpFieldBaggageTagLicensePlateNumbers: BcbpFieldId = 9;
+pub static kBcbpFieldIdBaggageTagLicensePlateNumbers: BcbpFieldId = 9;
 /// First non-consecutive baggage tag license plate numbers, optional, 13 bytes.
 #[no_mangle]
-pub static kBcbpFieldFirstNonConsecutiveBaggageTagLicensePlateNumbers: BcbpFieldId = 10;
+pub static kBcbpFieldIdFirstNonConsecutiveBaggageTagLicensePlateNumbers: BcbpFieldId = 10;
 /// Second non-consecutive baggage tag license plate numbers, optional, 13 bytes.
 #[no_mangle]
-pub static kBcbpFieldSecondNonConsecutiveBaggageTagLicensePlateNumbers: BcbpFieldId = 11;
+pub static kBcbpFieldIdSecondNonConsecutiveBaggageTagLicensePlateNumbers: BcbpFieldId = 11;
 
-/// Copies the field.
-/// 
+/// Returns a copy of the specified field.
+///
 /// # Note
 ///
 /// If the `Bcbp` object provided is null, this will return a null pointer.
@@ -130,6 +133,10 @@ pub static kBcbpFieldSecondNonConsecutiveBaggageTagLicensePlateNumbers: BcbpFiel
 /// done with it.
 ///
 /// [`BcbpDestroyString()`]: fn.BcbpDestroyString.html
+/// 
+/// # Issues
+/// _: Handle failure to coerce an &str into a CString differently, consider a panic.
+/// _: Return a specific error in the event an invalid field is provided.
 #[no_mangle]
 pub unsafe extern "C" fn BcbpCopyField(bcbp_ptr: *mut Bcbp, field_id: BcbpFieldId) -> *mut c_char {
     if bcbp_ptr.is_null() {
@@ -138,5 +145,36 @@ pub unsafe extern "C" fn BcbpCopyField(bcbp_ptr: *mut Bcbp, field_id: BcbpFieldI
 
     let bcbp = &*bcbp_ptr;
 
-    ptr::null_mut()
+    // Extract the specified field from the boarding pass root.
+    let field_value: Option<ffi::CString> = {
+        if field_id == kBcbpFieldIdPassengerName {
+            ffi::CString::new(bcbp.passenger_name()).ok()
+        } else if field_id == kBcbpFieldIdElectronicTicketIndicator {
+            ffi::CString::new(vec![bcbp.electronic_ticket_indicator() as u8]).ok()
+        } else if field_id == kBcbpFieldIdPassengerDescription {
+            bcbp.passenger_description().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFieldIdSourceOfCheckIn {
+            bcbp.source_of_check_in().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFieldIdSourceOfBoardingPassIssuance {
+            bcbp.source_of_boarding_pass_issuance().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFieldIdDateOfIssueOfBoardingPass {
+            bcbp.date_of_issue_of_boarding_pass().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFieldIdDocumentType {
+            bcbp.document_type().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFieldIdAirlineDesignatorOfBoardingPassIssuer {
+            bcbp.airline_designator_of_boarding_pass_issuer().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFieldIdBaggageTagLicensePlateNumbers {
+            bcbp.baggage_tag_license_plate_numbers().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFieldIdFirstNonConsecutiveBaggageTagLicensePlateNumbers {
+            bcbp.first_non_consecutive_baggage_tag_license_plate_numbers().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFieldIdSecondNonConsecutiveBaggageTagLicensePlateNumbers {
+            bcbp.second_non_consecutive_baggage_tag_license_plate_numbers().and_then(|s| ffi::CString::new(s).ok())
+        } else {
+            None
+        }
+    };
+
+    field_value
+        .map(ffi::CString::into_raw)
+        .unwrap_or(ptr::null_mut())
 }
