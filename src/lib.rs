@@ -25,15 +25,12 @@
 //! extern crate iata_bcbp;
 //! ```
 
-extern crate libc;
 #[macro_use]
 extern crate log;
 
 mod bcbp;
 mod de;
 mod error;
-
-pub mod ffi;
 
 pub use bcbp::{Bcbp, Leg, SecurityData};
 pub use de::from_str;
