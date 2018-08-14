@@ -1,35 +1,60 @@
 sudo: false
 language: rust
-rust:
-- stable
-- beta
-- nightly
-matrix:
-  allow_failures:
-  - rust: nightly
-before_script:
-- |
-  pip install 'travis-cargo<0.2' --user &&
-  export PATH=$HOME/.local/bin:$PATH
-script:
-- |
-  travis-cargo build &&
-  travis-cargo test &&
-  travis-cargo bench &&
-  travis-cargo --only stable doc
+
+# Necessary for `travis-cargo coveralls --no-sudo`
 addons:
   apt:
     packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+
+# Run accross all Rust trains with minimum version 1.0.0
+rust:
+  - stable
+  - beta
+  - nightly
+  - 1.0.0
+
+# Allow failures on Nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+
+# Install `travis-cargo`
+before_script:
+  - |
+    pip install 'travis-cargo<0.2' --user &&
+    export PATH=$HOME/.local/bin:$PATH
+
+# Run the build
+script:
+  - |
+    travis-cargo build &&
+    travis-cargo test &&
+    travis-cargo bench &&
+    travis-cargo --only stable doc
+
+# Upload documentation and coverage data
 after_success:
-- travis-cargo --only stable doc-upload
-- travis-cargo coveralls --no-sudo
+  # upload the documentation from the build with stable (automatically only actually
+  # runs on the master branch, not individual PRs)
+  - travis-cargo --only stable doc-upload
+  # measure code coverage and upload to coveralls.io (the verify
+  # argument mitigates kcov crashes due to malformed debuginfo, at the
+  # cost of some speed <https://github.com/huonw/travis-cargo/issues/12>)
+  - travis-cargo coveralls --no-sudo --verify
+
+# Do not notify
 notifications:
   email:
     on_success: never
+
+# Build environment
 env:
   global:
-  - TRAVIS_CARGO_NIGHTLY_FEATURE=dev
-  - secure: tgu8sl01yGQVMkaNdpBt+RGlt1+Ptntj6TJ+QF0+TFV1z2N+APTFyAtNY0pDTcWUdpgGbjstWFZi6KQA81YckSEbU61vKNI+ZgFe9dpwKh/Dp4yZKMzedVpHSumeKh47sO0NtDly3D85UovSjBBUNMiVN4C2KlNIAgFuAzr1L8UMV/jIJh1i7tIS9Y+v1Qk7Mbvwywflfo1yfi5z3ApSVhZa9bpeDXYeOyy50yxXhpLA+yHRGS0zpyn2St0KSvfS9ytJi8k9JRKuT1GKJ0bPgviTF6tTb26K1gfPtHqbJcmY05IOJPfXHYidOYkDm4TztI24YeCbsyK4l+uo7LT9+nfAIRPbcDLaApiWpxCIUHW1E5RBNklwtJsfFFnNYibn9ukyZrM1cCJGcf0a5XjUR1nHZ/Y8q14p1epFCbHRnhwiTp+H+U+Z3FtJBOLSytQEX9Q6cqYKJ7HV8fjEmlc6t7nRjWPzagWe325MqjaU4gUosV5GX8LzK04tSUG9znHACYSedVjnRQWWIFjAx5Y9D5OhrmbazVqlwukml8xogVhf1GJx8Jhl/mHXuB8YiFTZQKi2dEY3QxnLaipcqTNYVQu6pesuOfzYRrZVq+LOhr5bR3AiVExkyHneWUMrnh1ezPt7BmG76ccEDiZQtM0nGHco8+qDrZF/G+1Kx69tXNM=
+    # override the default `--features unstable` used for the nightly branch (optional)
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=nightly
+    # Encrypted GitHub token for documentation
+    - secure: tgu8sl01yGQVMkaNdpBt+RGlt1+Ptntj6TJ+QF0+TFV1z2N+APTFyAtNY0pDTcWUdpgGbjstWFZi6KQA81YckSEbU61vKNI+ZgFe9dpwKh/Dp4yZKMzedVpHSumeKh47sO0NtDly3D85UovSjBBUNMiVN4C2KlNIAgFuAzr1L8UMV/jIJh1i7tIS9Y+v1Qk7Mbvwywflfo1yfi5z3ApSVhZa9bpeDXYeOyy50yxXhpLA+yHRGS0zpyn2St0KSvfS9ytJi8k9JRKuT1GKJ0bPgviTF6tTb26K1gfPtHqbJcmY05IOJPfXHYidOYkDm4TztI24YeCbsyK4l+uo7LT9+nfAIRPbcDLaApiWpxCIUHW1E5RBNklwtJsfFFnNYibn9ukyZrM1cCJGcf0a5XjUR1nHZ/Y8q14p1epFCbHRnhwiTp+H+U+Z3FtJBOLSytQEX9Q6cqYKJ7HV8fjEmlc6t7nRjWPzagWe325MqjaU4gUosV5GX8LzK04tSUG9znHACYSedVjnRQWWIFjAx5Y9D5OhrmbazVqlwukml8xogVhf1GJx8Jhl/mHXuB8YiFTZQKi2dEY3QxnLaipcqTNYVQu6pesuOfzYRrZVq+LOhr5bR3AiVExkyHneWUMrnh1ezPt7BmG76ccEDiZQtM0nGHco8+qDrZF/G+1Kx69tXNM=
