@@ -234,3 +234,162 @@ pub unsafe extern "C" fn BcbpCopySecurityField(bcbp_ptr: *mut Bcbp, field_id: Bc
         .map(ffi::CString::into_raw)
         .unwrap_or(ptr::null_mut())
 }
+
+/// Identifies a field within the security data section of a boarding pass.
+pub type BcbpFlightLegFieldId = c_int;
+
+/// Always `null`.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdUnknown: c_int = 0;
+/// Operating carrier PNR code, required, 6 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdOperatingCarrierPNRCode: c_int = 1;
+/// From city airport code, required, 4 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFromCityAirportCode: c_int = 2;
+/// To city airport code, required, 4 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdToCityAirportCode: c_int = 3;
+/// Operating carrier designator, required, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdOperatingCarrierDesignator: c_int = 4;
+/// Flight number, required, 5 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFlightNumber: c_int = 5;
+/// Date of flight, required, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdDateOfFlight: c_int = 6;
+/// Compartment code, required, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdCompartmentCode: c_int = 7;
+/// Seat number, required, 4 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdSeatNumber: c_int = 8;
+/// Check-in Sequence Number, required, 5 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdCheckInSequenceNumber: c_int = 9;
+/// Passenger status, required, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdPassengerStatus: c_int = 10;
+/// Airline numeric code, optional, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdAirlineNumericCode: c_int = 11;
+/// Document form serial number, optional, 10 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdDocumentFormSerialNumber: c_int = 12;
+/// Selectee Indicator, optional, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdSelecteeIndicator: c_int = 13;
+/// International Document Verification, optional, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdInternationalDocumentVerification: c_int = 14;
+/// Marketing Carrier Designator, optional, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdMarketingCarrierDesignator: c_int = 15;
+/// Frequent Flyer Airline Designator, optional, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFrequentFlyerAirlineDesignator: c_int = 16;
+/// Frequent Flyer Number, optional, 16 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFrequentFlyerNumber: c_int = 17;
+/// ID/AD Indicator, optional, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdIdAdIndicator: c_int = 18;
+/// Free Baggage Allowance, optional, 3 bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFreeBaggageAllowance: c_int = 19;
+/// Fast Track, optional, 1 byte.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdFastTrack: c_int = 19;
+/// Airline Individual Use, optional, n bytes.
+#[allow(non_upper_case_globals)]
+pub const kBcbpFlightLegFieldIdAirlineIndividualUse: c_int = 20;
+
+/// Returns a copy of the specified flight leg data field.
+///
+/// # Note
+///
+/// If the `Bcbp` object provided is null, a null pointer will be returned.
+/// If an optional field is not specified, a null pointer will be returned.
+/// If the flight leg is invalid, a null pointer will be returned.
+/// Even if a field is specified within a boarding pass, it may be empty (all space)
+/// or contain invalid data.
+///
+/// # Safety
+///
+/// Make sure you destroy the result with [`BcbpDestroyString()`] once you are
+/// done with it.
+///
+/// [`BcbpDestroyString()`]: fn.BcbpDestroyString.html
+/// 
+/// # Issues
+/// _: Handle failure to coerce an &str into a CString differently, consider a panic.
+/// _: Return a specific error in the event an invalid field is provided.
+/// _: Return a specific error in the event an invalid leg is provided.
+#[no_mangle]
+pub unsafe extern "C" fn BcbpCopyFlightLegField(bcbp_ptr: *mut Bcbp, leg: c_int, field_id: BcbpFlightLegFieldId) -> *mut c_char {
+    if bcbp_ptr.is_null() {
+        return ptr::null_mut();
+    }
+
+    let bcbp = &*bcbp_ptr;
+
+    if leg < 0 || (leg as usize) >= bcbp.legs().len() {
+        return ptr::null_mut();
+    }
+
+    let flight_leg = &bcbp.legs()[leg as usize];
+
+    // Extract the specified field from the boarding pass root.
+    let field_value: Option<ffi::CString> = {
+        if field_id == kBcbpFlightLegFieldIdOperatingCarrierPNRCode {
+            ffi::CString::new(flight_leg.operating_carrier_pnr_code()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdFromCityAirportCode {
+            ffi::CString::new(flight_leg.from_city_airport_code()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdToCityAirportCode {
+            ffi::CString::new(flight_leg.to_city_airport_code()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdOperatingCarrierDesignator {
+            ffi::CString::new(flight_leg.operating_carrier_designator()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdFlightNumber {
+            ffi::CString::new(flight_leg.flight_number()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdDateOfFlight {
+            ffi::CString::new(flight_leg.date_of_flight()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdCompartmentCode {
+            ffi::CString::new(vec![flight_leg.compartment_code() as u8]).ok()
+        } else if field_id == kBcbpFlightLegFieldIdSeatNumber {
+            ffi::CString::new(flight_leg.seat_number()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdCheckInSequenceNumber {
+            ffi::CString::new(flight_leg.check_in_sequence_number()).ok()
+        } else if field_id == kBcbpFlightLegFieldIdPassengerStatus {
+            ffi::CString::new(vec![flight_leg.passenger_status() as u8]).ok()
+        } else if field_id == kBcbpFlightLegFieldIdAirlineNumericCode {
+            flight_leg.airline_numeric_code().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdDocumentFormSerialNumber {
+            flight_leg.document_form_serial_number().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdSelecteeIndicator {
+            flight_leg.selectee_indicator().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFlightLegFieldIdInternationalDocumentVerification {
+            flight_leg.international_document_verification().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFlightLegFieldIdMarketingCarrierDesignator {
+            flight_leg.marketing_carrier_designator().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdFrequentFlyerAirlineDesignator {
+            flight_leg.frequent_flyer_airline_designator().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdFrequentFlyerNumber {
+            flight_leg.frequent_flyer_number().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdIdAdIndicator {
+            flight_leg.id_ad_indicator().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFlightLegFieldIdFreeBaggageAllowance {
+            flight_leg.free_baggage_allowance().and_then(|s| ffi::CString::new(s).ok())
+        } else if field_id == kBcbpFlightLegFieldIdFastTrack {
+            flight_leg.fast_track().and_then(|c| ffi::CString::new(vec![c as u8]).ok())
+        } else if field_id == kBcbpFlightLegFieldIdAirlineIndividualUse {
+            flight_leg.airline_individual_use().and_then(|s| ffi::CString::new(s).ok())
+        } else {
+            None
+        }
+    };
+
+    field_value
+        .map(ffi::CString::into_raw)
+        .unwrap_or(ptr::null_mut())
+}
