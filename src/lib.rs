@@ -33,5 +33,5 @@ mod de;
 mod error;
 
 pub use bcbp::{Bcbp, Leg, SecurityData};
-pub use de::from_str;
+pub use de::{from_str, field::Field};
 pub use error::{Error, Result};
