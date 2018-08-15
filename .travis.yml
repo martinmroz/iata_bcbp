@@ -16,15 +16,11 @@ addons:
     sources:
       - kalakris-cmake
 
-# Run builds for all the trains (and more)
+# Run builds for all the trains
 rust:
   - nightly
   - beta
-  # check it compiles on the latest stable compiler
   - stable
-  # and the first stable one (this should be bumped as the minimum
-  # Rust version required changes)
-  - 1.0.0
 
 before_script:
   - export PATH=$HOME/.cargo/bin:$PATH
