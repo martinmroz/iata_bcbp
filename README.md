@@ -1,5 +1,5 @@
-IATA BCBP
-=========
+IATA Bar Coded Boarding Pass (BCBP) Library
+===========================================
 
 * [Documentation](https://martinmroz.github.io/iata_bcbp/master/iata_bcbp/)
 
