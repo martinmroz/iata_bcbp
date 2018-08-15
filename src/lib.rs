@@ -3,7 +3,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
-//! `iata_bcbp is` a Rust library for parsing IATA BCBP Type M
+//! `iata_bcbp` is a Rust library for parsing IATA BCBP Type M
 //! objects conforming to versions 2 through 6 of the standard inclusively. 
 //! This format is used by airlines to encode boarding pass information into 
 //! electronic ticket itinerary document barcodes in addition to paper and 
