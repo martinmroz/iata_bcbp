@@ -1,6 +1,8 @@
 IATA BCBP
 =========
 
+* [Documentation](http://martinmroz.github.io/iata_bcbp)
+
 A Rust library for parsing 
 [IATA BCBP Type M](https://www.iata.org/whatwedo/stb/Documents/BCBP-Implementation-Guide-5th-Edition-June-2016.pdf) 
 objects conforming to versions 2 through 6 of the standard inclusively. 
@@ -30,6 +32,8 @@ Here is an example which parses a BCBP object with test data and prints it:
 
 ```rust
 extern crate iata_bcbp;
+
+use std::str::FromStr;
 
 use iata_bcbp::Bcbp;
 
