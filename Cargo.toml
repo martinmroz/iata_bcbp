@@ -6,7 +6,7 @@ repository = "https://github.com/martinmroz/iata_bcbp.git"
 homepage = "https://github.com/martinmroz/iata_bcbp.git"
 license = "MIT"
 readme = "README.md"
-documentation = "http://martinmroz.github.io/iata_bcbp/"
+documentation = "https://martinmroz.github.io/iata_bcbp/master/iata_bcbp/"
 description = "IATA BCBP Parser in Rust Based on Resolution 792"
 
 [dependencies]

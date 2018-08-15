@@ -1,7 +1,7 @@
 IATA BCBP
 =========
 
-* [Documentation](http://martinmroz.github.io/iata_bcbp)
+* [Documentation](https://martinmroz.github.io/iata_bcbp/master/iata_bcbp/)
 
 A Rust library for parsing 
 [IATA BCBP Type M](https://www.iata.org/whatwedo/stb/Documents/BCBP-Implementation-Guide-5th-Edition-June-2016.pdf) 
