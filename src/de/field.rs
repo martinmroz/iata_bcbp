@@ -65,7 +65,7 @@ pub enum Field {
     ToCityAirportCode,
     /// Item 42: Operating Carrier Designator. 3 bytes. Data Type 'f'.
     OperatingCarrierDesignator,
-    /// Item 43: Flight Number. 5 bytes. Data Type 'NNNN[a]'.
+    /// Item 43: Flight Number. 5 bytes. Data Type 'NNNN\[a\]'.
     FlightNumber,
     /// Item 46: Date of Flight. 3 bytes. Data Type 'N'.
     DateOfFlight,
@@ -75,7 +75,7 @@ pub enum Field {
     IdAdIndicator,
     /// Item 104: Seat Number. 4 bytes. Data Type is usually 'NNNa', but can be 'INF ' or similar.
     SeatNumber,
-    /// Item 107: Check-In Sequence Number. 5 bytes. Data Type is usually 'NNNN[f]', but can be 'f'.
+    /// Item 107: Check-In Sequence Number. 5 bytes. Data Type is usually 'NNNN\[f\]', but can be 'f'.
     CheckInSequenceNumber,
     /// Item 108: International Document Verification. 1 byte. Data Type 'f'.
     InternationalDocumentVerification,
