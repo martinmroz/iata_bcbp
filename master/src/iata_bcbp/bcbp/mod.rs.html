@@ -1,0 +1,661 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/bcbp/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+</pre><pre class="rust ">
+<span class="comment">// Copyright (C) 2018 Martin Mroz</span>
+<span class="comment">//</span>
+<span class="comment">// This software may be modified and distributed under the terms</span>
+<span class="comment">// of the MIT license.  See the LICENSE file for details.</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>,<span class="ident">Eq</span>,<span class="ident">PartialEq</span>,<span class="ident">Hash</span>,<span class="ident">Debug</span>,<span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Leg</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">operating_carrier_pnr_code</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">from_city_airport_code</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">to_city_airport_code</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">operating_carrier_designator</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">flight_number</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">date_of_flight</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">compartment_code</span>: <span class="ident">char</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">seat_number</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">check_in_sequence_number</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">passenger_status</span>: <span class="ident">char</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">airline_numeric_code</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">document_form_serial_number</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">selectee_indicator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">international_document_verification</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">marketing_carrier_designator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">frequent_flyer_airline_designator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">frequent_flyer_number</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">id_ad_indicator</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">free_baggage_allowance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">fast_track</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">airline_individual_use</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Leg</span> {
+
+    <span class="doccomment">/// An alphanumeric string of up to 6 characters, left-aligned, space-padded.</span>
+    <span class="doccomment">/// This is the Passenger Name Record used to identify the booking</span>
+    <span class="doccomment">/// in the reservation system of the operating carrier.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">operating_carrier_pnr_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">operating_carrier_pnr_code</span>
+    }
+
+    <span class="doccomment">/// Three-letter or four-letter IATA code of the origin airport.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_city_airport_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">from_city_airport_code</span>
+    }
+
+    <span class="doccomment">/// Three-letter or four-letter IATA code of the destination airport.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_city_airport_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">to_city_airport_code</span>
+    }
+    
+    <span class="doccomment">/// Airline code of the marketing carrier, which can be the same as the operating carrier.</span>
+    <span class="doccomment">/// Two-character and three-letter IATA carrier designators</span>
+    <span class="doccomment">/// are permitted and the string is left-justified and space padded.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">marketing_carrier_designator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">marketing_carrier_designator</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// Airline code associated with the frequent flyer number.</span>
+    <span class="doccomment">/// Two-character and three-letter IATA carrier designators</span>
+    <span class="doccomment">/// are permitted and the string is left-justified and space padded.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">frequent_flyer_airline_designator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">frequent_flyer_airline_designator</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// 2 character or 3 letter airline designator followed by up to 13 numerics or</span>
+    <span class="doccomment">/// alphanumerics, or 16 numerics if the FFN is 16 digits.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">frequent_flyer_number</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">frequent_flyer_number</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// Values are defined in Resolution 792.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">id_ad_indicator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">id_ad_indicator</span>
+    }
+
+    <span class="doccomment">/// Airline code of the operating carrier, which can be the same as the marketing carrier.</span>
+    <span class="doccomment">/// Two-character and three-letter IATA carrier designators</span>
+    <span class="doccomment">/// are permitted and the string is left-justified and space padded.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">operating_carrier_designator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">operating_carrier_designator</span>
+    }
+
+    <span class="doccomment">/// A flight number comprised of four numeric characters followed by an optional</span>
+    <span class="doccomment">/// alphabetic suffix. This refers to the operating carrier.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">flight_number</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">flight_number</span>
+    }
+
+    <span class="doccomment">/// The Julian date code for the flight. The 3-digit number reflects the</span>
+    <span class="doccomment">/// day of the year beginning with &#39;0&#39;. The year is to be inferred.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">date_of_flight</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">date_of_flight</span>
+    }
+
+    <span class="doccomment">/// IATA compartment code indiciating the class of service.</span>
+    <span class="doccomment">/// Values are defined in Resolution 792.</span>
+    <span class="doccomment">/// A space indicates the field is not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compartment_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">char</span> {
+        <span class="self">self</span>.<span class="ident">compartment_code</span>
+    }
+
+    <span class="doccomment">/// Seat number of the passenger.</span>
+    <span class="doccomment">/// Usually 3 numerics followed by a single alphabetic.</span>
+    <span class="doccomment">/// In the case of infants, can be any 4 ASCII characters, often &#39;INF &#39;.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">seat_number</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">seat_number</span>
+    }
+
+    <span class="doccomment">/// Check-in sequence number.</span>
+    <span class="doccomment">/// Usually 4 numerics followed by an optional alpha or blank, however in the case of</span>
+    <span class="doccomment">/// infants, the format is defined by the host system and can be any 5 ASCII characters.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_in_sequence_number</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">check_in_sequence_number</span>
+    }
+
+    <span class="doccomment">/// The status of the passenger.</span>
+    <span class="doccomment">/// Field values are defined in Resolution 792.</span>
+    <span class="doccomment">/// A space indicates the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">passenger_status</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">char</span> {
+        <span class="self">self</span>.<span class="ident">passenger_status</span>
+    }
+
+    <span class="doccomment">/// The three-digit airline numeric code.</span>
+    <span class="doccomment">/// This is also the first three digits of the eTicket number.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">airline_numeric_code</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">airline_numeric_code</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// The ten-digit DSN.</span>
+    <span class="doccomment">/// This is also the last ten digits of the eTicket number.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">document_form_serial_number</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">document_form_serial_number</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// This field is used by certain agencies to demarcate individuals requiring extra screening.</span>
+    <span class="doccomment">/// Although a conditional field, it is now required as of Resolotion 792 Version 6 when</span>
+    <span class="doccomment">/// travel involves the United States. Values &#39;0&#39;, &#39;1&#39;, or &#39;3&#39; determine the type</span>
+    <span class="doccomment">/// of screening the passenger will receive at US airports.</span>
+    <span class="doccomment">/// A space indicates the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">selectee_indicator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">selectee_indicator</span>
+    }
+
+    <span class="doccomment">/// This field is used by carriers to identify passengers requiring document verification.</span>
+    <span class="doccomment">/// Connected to the display of the &#39;DOCS OK&#39; string on international boarding passes.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">international_document_verification</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">international_document_verification</span>
+    }
+
+    <span class="doccomment">/// Indicates if the passenger is eligible for fast track.</span>
+    <span class="doccomment">/// If &#39;Y&#39;, the passenger is eligible, &#39;N&#39; if not, &#39; &#39; if not set.</span>
+    <span class="doccomment">/// Any other values are invalid.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fast_track</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">fast_track</span>
+    }
+
+    <span class="doccomment">/// Three characters, unstructured, left-aligned and space padded,</span>
+    <span class="doccomment">/// indicating how much baggage passengers are able to take with them free of charge.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">free_baggage_allowance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">free_baggage_allowance</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// Optional unstructured data for airline individual use.</span>
+    <span class="doccomment">/// Content frequently includes frequent flyer tier, passenger preferences, etc.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">airline_individual_use</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">airline_individual_use</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>,<span class="ident">Eq</span>,<span class="ident">PartialEq</span>,<span class="ident">Hash</span>,<span class="ident">Debug</span>,<span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SecurityData</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">type_of_security_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">security_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">SecurityData</span> {
+
+    <span class="doccomment">/// Vendor specific flag indicating the type of the security data which follows.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">type_of_security_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">type_of_security_data</span>
+    }
+
+    <span class="doccomment">/// Security data used to verify the boarding pass was not tampered with.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">security_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">security_data</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>,<span class="ident">Eq</span>,<span class="ident">PartialEq</span>,<span class="ident">Hash</span>,<span class="ident">Debug</span>,<span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Bcbp</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">passenger_name</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">electronic_ticket_indicator</span>: <span class="ident">char</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">passenger_description</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">source_of_check_in</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">source_of_boarding_pass_issuance</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">date_of_issue_of_boarding_pass</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">document_type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">airline_designator_of_boarding_pass_issuer</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">baggage_tag_license_plate_numbers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">first_non_consecutive_baggage_tag_license_plate_numbers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">second_non_consecutive_baggage_tag_license_plate_numbers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">legs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Leg</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">security_data</span>: <span class="ident">SecurityData</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Bcbp</span> {
+
+    <span class="doccomment">/// All legs encoded into the boarding pass.</span>
+    <span class="doccomment">/// At least one needs to be present to form a valid boarding pass.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">legs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">Leg</span>] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">legs</span>
+    }
+
+    <span class="doccomment">/// A reference to the optional security data used to verify a boarding pass was not tamptered with.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">security_data</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">SecurityData</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">security_data</span>
+    }
+
+    <span class="doccomment">/// Used to differentiate between an electronic ticket (&#39;E&#39;) and another type of travel document.</span>
+    <span class="doccomment">/// Values are defined in Resolution 792.</span>
+    <span class="doccomment">/// A space indicates the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">electronic_ticket_indicator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">char</span> {
+        <span class="self">self</span>.<span class="ident">electronic_ticket_indicator</span>
+    }
+    
+    <span class="doccomment">/// This describes the passenger.</span>
+    <span class="doccomment">/// Values are defined in Resolution 792.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">passenger_description</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">passenger_description</span>
+    }
+    
+    <span class="doccomment">/// The name of the passenger. Up to 20 characters, left-aligned, space padded.</span>
+    <span class="doccomment">/// The format is `LAST_NAME/FIRST_NAME[TITLE]`. There is no separator between</span>
+    <span class="doccomment">/// the first name and the title, and no indication a title is present.</span>
+    <span class="doccomment">/// Certain names have characters which cannot be translated and</span>
+    <span class="doccomment">/// special handling may be required.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">passenger_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">passenger_name</span>
+    }
+
+    <span class="doccomment">/// This field reflects channel in which the customer initiated check-in.</span>
+    <span class="doccomment">/// Values are defined in Resolution 792 Attachment C.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">source_of_check_in</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">source_of_check_in</span>
+    }
+
+    <span class="doccomment">/// This field reflects channel which issued the boarding pass.</span>
+    <span class="doccomment">/// Values are defined in Resolution 792.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">source_of_boarding_pass_issuance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">source_of_boarding_pass_issuance</span>
+    }
+
+    <span class="doccomment">/// Optionally the 4-digit Julian date representing when the boarding pass</span>
+    <span class="doccomment">/// was issued. The first digit is the last digit of the year and the next three</span>
+    <span class="doccomment">/// represent the number of days elapsed.</span>
+    <span class="doccomment">/// For example:</span>
+    <span class="doccomment">///   &quot;6001&quot; represnts January 1, 2016.</span>
+    <span class="doccomment">///   &quot;6366&quot; represaents December 31, 2016 (a leap year).</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">date_of_issue_of_boarding_pass</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">date_of_issue_of_boarding_pass</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// The type of the document, &#39;B&#39; indicating a boarding pass.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">document_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">document_type</span>
+    }
+
+    <span class="doccomment">/// Airline code of the boarding pass issuer.</span>
+    <span class="doccomment">/// Two-character and three-letter IATA carrier designators</span>
+    <span class="doccomment">/// are permitted and the string is left-justified and space padded.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">airline_designator_of_boarding_pass_issuer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">airline_designator_of_boarding_pass_issuer</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// This field allows carriers to populate baggage tag numbers and the number</span>
+    <span class="doccomment">/// of consecutive bags. This 13-character fiels is divided into:</span>
+    <span class="doccomment">///         0: &#39;0&#39; for interline tag, &#39;1&#39; for fall-back tag, &#39;2&#39; for interline rush tag.</span>
+    <span class="doccomment">///    2... 4: carrier numeric code.</span>
+    <span class="doccomment">///    5...10: carrier initial tag number with leading zeroes.</span>
+    <span class="doccomment">///   11...13: number of consecutive bags (up to 999).</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">baggage_tag_license_plate_numbers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">baggage_tag_license_plate_numbers</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// This field allows carriers who handle non-sequential bags to include a second set of them</span>
+    <span class="doccomment">/// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">first_non_consecutive_baggage_tag_license_plate_numbers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">first_non_consecutive_baggage_tag_license_plate_numbers</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+    <span class="doccomment">/// This field allows carriers who handle non-sequential bags to include a third set of them</span>
+    <span class="doccomment">/// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.</span>
+    <span class="doccomment">/// Spaces indicate the field is not set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">second_non_consecutive_baggage_tag_license_plate_numbers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">second_non_consecutive_baggage_tag_license_plate_numbers</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)
+    }
+
+}
+</pre>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../../";window.currentCrate = "iata_bcbp";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script defer src="../../../search-index.js"></script></body></html>

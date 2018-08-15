@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error",""],["Field",""]],"fn":[["from_str","Parses a boarding pass from `input_data` representable as a string reference."]],"struct":[["Bcbp",""],["Leg",""],["SecurityData",""]],"type":[["Result",""]]});
