@@ -1,6 +1,5 @@
 var ALIASES = {};
 ALIASES['cfg_if'] = {};
-ALIASES['cfg_if'] = {};
 ALIASES['iata_bcbp'] = {};
 ALIASES['iata_bcbp'] = {};
 ALIASES['iata_bcbp'] = {};
@@ -9,5 +8,4 @@ ALIASES['iata_bcbp'] = {};
 ALIASES['iata_bcbp'] = {};
 ALIASES['iata_bcbp'] = {};
 ALIASES['iata_bcbp'] = {};
-ALIASES['log'] = {};
 ALIASES['log'] = {};
