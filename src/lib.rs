@@ -4,9 +4,9 @@
 // of the MIT license.  See the LICENSE file for details.
 
 //! iata_bcbp is a Rust library for parsing IATA Bar Coded Boarding Pass
-//! (or BCBP) data. The library support reading 'M' type pass data and
-//! supports all the fields defined in version 6 of the standard as
-//! defined in IATA Resolution 792.
+//! (BCBP) data format. The library support reading 'M' type pass data and
+//! supports all the fields defined in versions 2 through 6 of the standard,
+//! inclusive, defined in IATA Resolution 792.
 //!
 //! # Example
 //! ```rust
@@ -32,20 +32,6 @@
 //!        println!(" Sequence: {}"  , leg.check_in_sequence_number());
 //!    }
 //! }
-//! ```
-//! # Installation
-//!
-//! Add the following to your `Cargo.toml` file:
-//!
-//! ```toml
-//! [dependencies]
-//! iata_bcbp = "0.1"
-//! ```
-//!
-//! And to the top of your `main.rs`:
-//!
-//! ```rs
-//! extern crate iata_bcbp;
 //! ```
 
 #[macro_use]
