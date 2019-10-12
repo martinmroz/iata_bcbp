@@ -4,303 +4,234 @@
 // of the MIT license.  See the LICENSE file for details.
 
 use bcbp;
-use error::{Error, Result};
 use de::field;
+use error::{Error, Result};
 
-#[derive(Clone,Eq,PartialEq,Hash,Debug)]
-struct Scanner<'a> {
-    input: &'a str,
+use arrayvec::{Array, ArrayString};
+use nom::{
+    bytes::complete::{take, take_while_m_n},
+    character::complete::{anychar, char},
+    combinator::map_res,
+    error::{context, convert_error, VerboseError},
+    IResult,
+};
+
+/// Tests if char c is ASCII uppercase alphabetic (A-F) or numeric (0-9).
+fn is_ascii_uppercase_hexdigit(c: char) -> bool {
+    c.is_ascii_hexdigit() && !c.is_ascii_lowercase()
 }
 
-impl<'a> Scanner<'a> {
+/// Parses a one- or two-digit ASCII uppercase hexadecimal string literal value.
+///
+/// # Notes
+/// - Does not provide additional context.
+fn hex_byte_literal<'a>(
+    input: &'a str,
+    length: usize,
+) -> IResult<&'a str, u8, VerboseError<&'a str>> {
+    assert!(length == 1 || length == 2);
+    map_res(
+        take_while_m_n(length, length, is_ascii_uppercase_hexdigit),
+        |s: &str| u8::from_str_radix(s, 16),
+    )(input)
+}
 
-    /// Return a new intance of the receiver over the `input`.
-    pub fn new(input: &'a str) -> Self {
-        Scanner { input }
+/// Parses the field encoding the number of legs embedded in the BCBP data.
+fn number_of_legs<'a>(input: &'a str) -> IResult<&'a str, u8, VerboseError<&'a str>> {
+    context(field::Field::NumberOfLegsEncoded.name(), |input| {
+        hex_byte_literal(input, 1)
+    })(input)
+}
+
+/// Parses and yields the variable-size conditional items field for a flight leg.
+fn leg_conditional_items<'a>(input: &'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>> {
+    let (input, length) = context(field::Field::FieldSizeOfVariableSizeField.name(), |input| {
+        hex_byte_literal(input, 2)
+    })(input)?;
+
+    match length {
+        0 => Ok((input, "")),
+        _ => take(length as usize)(input),
+    }
+}
+
+/// Parses the format code specifier tag for an M-type IATA BCBP pass.
+fn format_code_m<'a>(input: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
+    context(field::Field::FormatCode.name(), 
+        char('M')
+    )(input)
+}
+
+/// Parses a fixed-length String-type field.
+fn string_field<'a, T>(
+    input: &'a str,
+    field_id: field::Field,
+) -> IResult<&'a str, ArrayString<T>, VerboseError<&'a str>>
+where
+    T: Array<Item = u8> + Copy,
+{
+    // Verify that the size of the storage array matches the field exactly.
+    assert_eq!(std::mem::size_of::<T>(), field_id.len());
+
+    // Copies bytes equal to the length of the specified field into an ArrayString.
+    let parse_field = map_res(
+        take(field_id.len()), 
+        |s: &str| ArrayString::from(s)
+    );
+
+    // Ascribe the name of the field as context for the operation.
+    context(field_id.name(), parse_field)(input)
+}
+
+/// Parses an optional fixed-length String-type field within a variable-length section.
+///
+/// # Notes
+/// - This function will succeed and return None if the remaining length of the string is zero.
+/// - This function will fail if the remaining length of the string is less than that of the requested field.
+fn optional_string_field<'a, T>(
+    input: &'a str,
+    field_id: field::Field,
+) -> IResult<&'a str, Option<ArrayString<T>>, VerboseError<&'a str>>
+where
+    T: Array<Item = u8> + Copy,
+{
+    if input.len() == 0 {
+        Ok((input, None))
+    } else {
+        string_field(input, field_id).map(|(input, field)| (input, Some(field)))
+    }
+}
+
+/// Parses a single-character field.
+fn character_field<'a>(
+    input: &'a str,
+    field_id: field::Field,
+) -> IResult<&'a str, char, VerboseError<&'a str>> {
+    assert_eq!(field_id.len(), 1);
+    context(field_id.name(), anychar)(input)
+}
+
+/// Parses an optional single-character field within a variable-length section.
+///
+/// # Notes
+/// - This function will succeed and return None if the remaining length of the string is zero.
+fn optional_character_field<'a>(
+    input: &'a str,
+    field_id: field::Field,
+) -> IResult<&'a str, Option<char>, VerboseError<&'a str>> {
+    if (input.len() == 0) {
+        Ok((input, None))
+    } else {
+        character_field(input, field_id).map(|(input, field)| (input, Some(field)))
+    }
+}
+
+/// Parses a boarding pass from `input`.
+///
+/// The input must contain only valid ASCII characters.
+fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str>> {
+    // Check that the input string is likely an M-type BCBP string.
+    let (input, _) = format_code_m(input)?;
+
+    // The number of legs informs the breakdown of the various field iterators.
+    let (input, number_of_legs_encoded) = number_of_legs(input)?;
+
+    // Scan mandatory unique fields.
+    let (input, passenger_name) = 
+        string_field(input, field::Field::PassengerName)?;
+    let (input, electronic_ticket_indicator) =
+        character_field(input, field::Field::ElectronicTicketIndicator)?;
+
+    let mut legs = Vec::new();
+
+    for leg_index in 0 .. number_of_legs_encoded {
+        // Mandatory fields common to all legs.
+        let (input, operating_carrier_pnr_code) =
+            string_field(input, field::Field::OperatingCarrierPnrCode)?;
+        let (input, from_city_airport_code) =
+            string_field(input, field::Field::FromCityAirportCode)?;
+        let (input, to_city_airport_code) = 
+            string_field(input, field::Field::ToCityAirportCode)?;
+        let (input, operating_carrier_designator) =
+            string_field(input, field::Field::OperatingCarrierDesignator)?;
+        let (input, flight_number) = 
+            string_field(input, field::Field::FlightNumber)?;
+        let (input, date_of_flight) = 
+            string_field(input, field::Field::DateOfFlight)?;
+        let (input, compartment_code) = 
+            character_field(input, field::Field::CompartmentCode)?;
+        let (input, seat_number) = 
+            string_field(input, field::Field::SeatNumber)?;
+        let (input, check_in_sequence_number) =
+            string_field(input, field::Field::CheckInSequenceNumber)?;
+        let (input, passenger_status) = 
+            character_field(input, field::Field::PassengerStatus)?;
+
+        // A set of conditional items may follow the required items for each leg.
+        let (input, conditional_items_input) = leg_conditional_items(input)?;
+
+        legs.push(bcbp::Leg {
+            operating_carrier_pnr_code,
+            from_city_airport_code,
+            to_city_airport_code,
+            operating_carrier_designator,
+            flight_number,
+            date_of_flight,
+            compartment_code,
+            seat_number,
+            check_in_sequence_number,
+            passenger_status,
+            ..Default::default()
+        });
     }
 
-    /// Returns `true` if no more input is available.
-    #[inline]
-    pub fn is_at_end(&self) -> bool {
-        self.remaining_len() == 0
-    }
-
-    /// Returns the number of bytes of input remaining to process.
-    #[inline]
-    pub fn remaining_len(&self) -> usize {
-        self.input.len()
-    }
-
-    /// Returns a scanner over a fixed-length sub-section of the input.
-    /// The entire amount is consumed immediately if space is available whether or not
-    /// any fields within the sub-section are invalid.
-    /// 
-    /// # Panics
-    /// Will panic if `len` is `0`.
-    pub fn scan_subsection(&mut self, len: usize) -> Result<Scanner<'a>> {
-        assert!(len > 0, "Attempting to scan a zero-length sub-field list is not valid.");
-        trace!("Scanning Subsection (Length {})", len);
-        if self.remaining_len() < len {
-            Err(Error::SubsectionTooLong)
-        } else {
-            let sub_fields = &self.input[ .. len ];
-            self.input = &self.input[ len .. ];
-            Ok(Scanner::new(sub_fields))
-        }
-    }
-
-    /// Scans and returns the string underlying a field (variable or fixed-length)
-    /// with a specified length value.
-    /// 
-    /// # Panics
-    /// Will panic if `len` is `0`.
-    /// Will panic if the fixed-length field intrinsic length is not equal to `len`.
-    pub fn scan_str_field_len(&mut self, field: field::Field, len: usize) -> Result<&'a str> {
-        assert!(len > 0, "Attempting to scan zero bytes of data.");
-        assert!(field.len() == 0 || field.len() == len, "Length is not compatible the intrinsic length of the field.");
-        if self.remaining_len() < len {
-            trace!("Unexpected End of Input Scanning {} (Length {})", field, len);
-            Err(Error::UnexpectedEndOfInput(field))
-        } else {
-            let substring = &self.input[ .. len ];
-            self.input = &self.input[ len .. ];
-            trace!("Scanning {} (Length {}) - '{}'", field, len, substring);
-            Ok(substring)
-        }
-    }
-
-    /// Scans and returns the string underlying a fixed-length field.
-    /// Uses the intrinsic length.
-    /// 
-    /// # Panics
-    /// Will panic if `field` is variable-length.
-    pub fn scan_str_field(&mut self, field: field::Field) -> Result<&'a str> {
-        assert!(field.len() != 0, "Attempting to scan a variable-length field as fixed-length.");
-        self.scan_str_field_len(field, field.len())
-    }
-
-    /// Scans and returns an optional string underlying a fixed-length field.
-    /// If there is no more input to process, returns `Ok(None)`.
-    /// Uses the intrinsic length.
-    /// 
-    /// # Panics
-    /// Will panic if `field` is variable-length.
-    pub fn scan_optional_str_field(&mut self, field: field::Field) -> Result<Option<&'a str>> {
-        assert!(field.len() != 0, "Attempting to scan a variable-length field as fixed-length.");
-        if self.is_at_end() {
-            Ok(None)
-        } else {
-            self.scan_str_field(field).map(|result| Some(result))
-        }
-    }
-
-    /// Scans a fixed-length numeric field yielding the numeric value interpreted
-    /// with the given `radix`.
-    /// 
-    /// # Panics
-    /// Will panic if `field` is variable-length.
-    /// 
-    /// # Issues
-    /// Should not advance the input until the numeric value is sucessfully scanned.
-    pub fn scan_unsigned_field(&mut self, field: field::Field, radix: u32) -> Result<u64> {
-        self.scan_str_field(field)
-            .and_then(|str_value| {
-                u64::from_str_radix(str_value, radix).map_err(|_| Error::ExpectedInteger(field))
-            })
-    }
-
-    /// Scans and returns the character value underlying a fixed-length field.
-    /// 
-    /// # Panics
-    /// Will panic if `field` is a length other than 1.
-    pub fn scan_char_field(&mut self, field: field::Field) -> Result<char> {
-        assert!(field.len() == 1, "Attempting to scan a single character out of a longer field.");
-        self.scan_str_field(field)
-            .map(|value| value.chars().next().unwrap())
-    }
-
-    /// Scans and returns an optional character value underlying a fixed-length field.
-    /// If there is no more input to process, returns `Ok(None)`.
-    /// 
-    /// # Panics
-    /// Will panic if `field` is a length other than 1.
-    pub fn scan_optional_char_field(&mut self, field: field::Field) -> Result<Option<char>> {
-        assert!(field.len() == 1, "Attempting to scan a single character out of a longer field.");
-        if self.is_at_end() {
-            Ok(None)
-        } else {
-            self.scan_char_field(field).map(|c| Some(c))
-        }
-    }
-
+    Ok((
+        input,
+        bcbp::Bcbp {
+            passenger_name,
+            electronic_ticket_indicator,
+            legs,
+            ..Default::default()
+        },
+    ))
 }
 
 /// Parses a boarding pass from `input_data` representable as a string reference.
-pub fn from_str<I>(input_data: I) -> Result<bcbp::Bcbp> where I: AsRef<str> {
+pub fn from_str<I>(input_data: I) -> Result<bcbp::Bcbp>
+where
+    I: AsRef<str>,
+{
     let input = input_data.as_ref();
     if !input.is_ascii() {
-        return Err(Error::InvalidCharacters)
+        return Err(Error::InvalidCharacters);
     }
 
-    let mut scanner = Scanner::new(input);
-
-    // Check that the input string is likely an M-type BCBP string.
-    if scanner.scan_str_field(field::Field::FormatCode)? != "M" {
+    // Sanity-check that the input is likely an IATA Type M BCBP Boarding Pass.
+    if !format_code_m(input).is_ok() {
         return Err(Error::UnsupportedFormat);
     }
 
-    // The number of legs informs the breakdown of the various field iterators.
-    let number_of_legs_encoded = scanner.scan_unsigned_field(field::Field::NumberOfLegsEncoded, 10)?;
+    // Pass the provided input data with the nom combinator and map the error.
+    let (remainder, boarding_pass) = bcbp(input).map_err(|e| match e {
+        nom::Err::Incomplete(_) => 
+            Error::UnexpectedEndOfInput,
+        nom::Err::Error(verbose_error) | nom::Err::Failure(verbose_error) =>
+            Error::ParseFailed(convert_error(input, verbose_error)),
+    })?;
 
-    // Create a parser for the mandatory unique fields.
-    let mut bcbp = bcbp::Bcbp::default();
-    bcbp.passenger_name =
-        scanner.scan_str_field(field::Field::PassengerName)?.into();
-    bcbp.electronic_ticket_indicator =
-        scanner.scan_char_field(field::Field::ElectronicTicketIndicator)?;
-
-    for leg_index in 0 .. number_of_legs_encoded {
-        let mut leg = bcbp::Leg::default();
-        
-        // Mandatory fields common to all legs.
-        leg.operating_carrier_pnr_code =
-            scanner.scan_str_field(field::Field::OperatingCarrierPnrCode)?.into();
-        leg.from_city_airport_code =
-            scanner.scan_str_field(field::Field::FromCityAirportCode)?.into();
-        leg.to_city_airport_code =
-            scanner.scan_str_field(field::Field::ToCityAirportCode)?.into();
-        leg.operating_carrier_designator =
-            scanner.scan_str_field(field::Field::OperatingCarrierDesignator)?.into();
-        leg.flight_number =
-            scanner.scan_str_field(field::Field::FlightNumber)?.into();
-        leg.date_of_flight =
-            scanner.scan_str_field(field::Field::DateOfFlight)?.into();
-        leg.compartment_code =
-            scanner.scan_char_field(field::Field::CompartmentCode)?;
-        leg.seat_number =
-            scanner.scan_str_field(field::Field::SeatNumber)?.into();
-        leg.check_in_sequence_number =
-            scanner.scan_str_field(field::Field::CheckInSequenceNumber)?.into();
-        leg.passenger_status =
-            scanner.scan_char_field(field::Field::PassengerStatus)?;
-
-        // Field size of the variable size field that follows for the leg.
-        let conditional_item_size = scanner.scan_unsigned_field(field::Field::FieldSizeOfVariableSizeField, 16)?;
-        if conditional_item_size > 0 {
- 
-            // Scanner over the entire set of conditional fields.
-            let mut conditional_item_scanner = scanner.scan_subsection(conditional_item_size as usize)?;
-
-            // The first leg may contain some optional fields at the root level.
-            if leg_index == 0 {
-
-                // Validate the beginning of version number tag as a sanity check.
-                if conditional_item_scanner.remaining_len() > 0 {
-                    if conditional_item_scanner.scan_str_field(field::Field::BeginningOfVersionNumber)? != ">" {
-                        return Err(Error::InvalidStartOfVersionNumber);
-                    }
-                }
-
-                // The version number is part of the structure and must be consumed, but is not used.
-                if conditional_item_scanner.remaining_len() > 0 {
-                    let _ = conditional_item_scanner.scan_str_field(field::Field::VersionNumber)?;
-                }
-
-                // Conditional unique fields are embedded in their own variable-length wrapper.
-                if conditional_item_scanner.remaining_len() > 0 {
-                    let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageUnique, 16)?;
-                    if len > 0 {
-                        let mut unique_scanner = conditional_item_scanner.scan_subsection(len as usize)?;
-
-                        bcbp.passenger_description =
-                            unique_scanner.scan_optional_char_field(field::Field::PassengerDescription)?;
-                        bcbp.source_of_check_in =
-                            unique_scanner.scan_optional_char_field(field::Field::SourceOfCheckIn)?;
-                        bcbp.source_of_boarding_pass_issuance =
-                            unique_scanner.scan_optional_char_field(field::Field::SourceOfBoardingPassIssuance)?;
-                        bcbp.date_of_issue_of_boarding_pass =
-                            unique_scanner.scan_optional_str_field(field::Field::DateOfIssueOfBoardingPass)?.map(Into::into);
-                        bcbp.document_type =
-                            unique_scanner.scan_optional_char_field(field::Field::DocumentType)?;
-                        bcbp.airline_designator_of_boarding_pass_issuer =
-                            unique_scanner.scan_optional_str_field(field::Field::AirlineDesignatorOfBoardingPassIssuer)?.map(Into::into);
-                        bcbp.baggage_tag_license_plate_numbers =
-                            unique_scanner.scan_optional_str_field(field::Field::BaggageTagLicensePlateNumbers)?.map(Into::into);
-                        bcbp.first_non_consecutive_baggage_tag_license_plate_numbers =
-                            unique_scanner.scan_optional_str_field(field::Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers)?.map(Into::into);
-                        bcbp.second_non_consecutive_baggage_tag_license_plate_numbers =
-                            unique_scanner.scan_optional_str_field(field::Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers)?.map(Into::into);
-                    }
-                }
-            }
-
-            // Conditional fields common to all legs.
-            if conditional_item_scanner.remaining_len() > 0 {
-                let len = conditional_item_scanner.scan_unsigned_field(field::Field::FieldSizeOfStructuredMessageRepeated, 16)?;
-                if len > 0 {
-                    let mut repeated_scanner = conditional_item_scanner.scan_subsection(len as usize)?;
-
-                    leg.airline_numeric_code =
-                        repeated_scanner.scan_optional_str_field(field::Field::AirlineNumericCode)?.map(Into::into);
-                    leg.document_form_serial_number =
-                        repeated_scanner.scan_optional_str_field(field::Field::DocumentFormSerialNumber)?.map(Into::into);
-                    leg.selectee_indicator =
-                        repeated_scanner.scan_optional_char_field(field::Field::SelecteeIndicator)?;
-                    leg.international_document_verification =
-                        repeated_scanner.scan_optional_char_field(field::Field::InternationalDocumentVerification)?;
-                    leg.marketing_carrier_designator =
-                        repeated_scanner.scan_optional_str_field(field::Field::MarketingCarrierDesignator)?.map(Into::into);
-                    leg.frequent_flyer_airline_designator =
-                        repeated_scanner.scan_optional_str_field(field::Field::FrequentFlyerAirlineDesignator)?.map(Into::into);
-                    leg.frequent_flyer_number =
-                        repeated_scanner.scan_optional_str_field(field::Field::FrequentFlyerNumber)?.map(Into::into);
-                    leg.id_ad_indicator =
-                        repeated_scanner.scan_optional_char_field(field::Field::IdAdIndicator)?;
-                    leg.free_baggage_allowance =
-                        repeated_scanner.scan_optional_str_field(field::Field::FreeBaggageAllowance)?.map(Into::into);
-                    leg.fast_track =
-                        repeated_scanner.scan_optional_char_field(field::Field::FastTrack)?;
-                }
-            }
-
-            // Any remaining text is ascribed to airline use.
-            if conditional_item_scanner.remaining_len() > 0 {
-                let remaining_len = conditional_item_scanner.remaining_len();
-                let body = conditional_item_scanner.scan_str_field_len(field::Field::AirlineIndividualUse, remaining_len)?;
-                leg.airline_individual_use = Some(body.into());
-            }
-        }
-
-        bcbp.legs.push(leg);
-    }
-
-    // Remaining input is ascribed to Security Data.
-    if scanner.remaining_len() > 0 {
-        if scanner.scan_str_field(field::Field::BeginningOfSecurityData)? != "^" {
-            return Err(Error::InvalidStartOfSecurityData);
-        }
-
-        let mut security_data = bcbp::SecurityData::default();
-
-        // The security data type captured as a separate field set as the next field, data length, is discarded.
-        security_data.type_of_security_data =
-            scanner.scan_optional_char_field(field::Field::TypeOfSecurityData)?;
-
-        // Scan the length of the security data.
-        if scanner.remaining_len() > 0 {
-            let len = scanner.scan_unsigned_field(field::Field::LengthOfSecurityData, 16)?;
-            if len > 0 {
-                let body = scanner.scan_str_field_len(field::Field::SecurityData, len as usize)?;
-                security_data.security_data = Some(body.into());
-            }
-        }
-
-        bcbp.security_data = security_data;
-    }
-
-    if !scanner.is_at_end() {
+    if remainder.len() > 0 {
         Err(Error::TrailingCharacters)
     } else {
-        Ok(bcbp)
+        Ok(boarding_pass)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str() {
+        assert_eq!(from_str("M1MROZ/MARTIN         EXXXXXX SJCLAXAS 3317 207U001A0006 34D>218 VV8207BAS              2502771980993865 AS AS XXXXX55200000000Z29  00010"), Err(Error::TrailingCharacters));
     }
 }

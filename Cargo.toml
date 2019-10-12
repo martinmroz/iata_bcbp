@@ -10,7 +10,8 @@ documentation = "https://martinmroz.github.io/iata_bcbp/master/iata_bcbp/"
 description = "IATA BCBP Parser in Rust Based on Resolution 792"
 
 [dependencies]
-log = "0.4"
+arrayvec = "0.4"
 
-[dev-dependencies]
-env_logger = "0.5"
+[dependencies.nom]
+version = "^5"
+features = []

@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-#[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Debug,Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub enum Field {
     /// Item 1: Format Code. 1 byte. Data Type 'f'.
     FormatCode,
@@ -96,7 +96,6 @@ pub enum Field {
 }
 
 impl Field {
-
     /// The required length of the field. If zero, the field may be arbitrarily long.
     pub fn len(self) -> usize {
         match self {
@@ -149,95 +148,94 @@ impl Field {
     /// Name of the field as defined in the Implementation Guide.
     pub fn name(self) -> &'static str {
         match self {
-            Field::FormatCode => 
+            Field::FormatCode =>
                 "Format Code",
-            Field::AirlineIndividualUse => 
+            Field::AirlineIndividualUse =>
                 "Airline Individual Use",
-            Field::NumberOfLegsEncoded => 
+            Field::NumberOfLegsEncoded =>
                 "Number of Legs Encoded",
-            Field::FieldSizeOfVariableSizeField => 
+            Field::FieldSizeOfVariableSizeField =>
                 "Field Size of Variable Size Field",
-            Field::OperatingCarrierPnrCode => 
+            Field::OperatingCarrierPnrCode =>
                 "Operating Carrier PNR Code",
-            Field::BeginningOfVersionNumber => 
+            Field::BeginningOfVersionNumber =>
                 "Beginning of Version Number",
-            Field::VersionNumber => 
+            Field::VersionNumber =>
                 "Version Number",
-            Field::FieldSizeOfStructuredMessageUnique => 
+            Field::FieldSizeOfStructuredMessageUnique =>
                 "Field Size of Strutured Message (Unique)",
-            Field::PassengerName => 
+            Field::PassengerName =>
                 "Passenger Name",
-            Field::SourceOfCheckIn => 
+            Field::SourceOfCheckIn =>
                 "Source of Check-In",
-            Field::SourceOfBoardingPassIssuance => 
+            Field::SourceOfBoardingPassIssuance =>
                 "Source of Boarding Pass Issuance",
-            Field::PassengerDescription => 
+            Field::PassengerDescription =>
                 "Passenger Description",
-            Field::DocumentType => 
+            Field::DocumentType =>
                 "Document Type",
-            Field::FieldSizeOfStructuredMessageRepeated => 
+            Field::FieldSizeOfStructuredMessageRepeated =>
                 "Field Size of Strutured Message (Repeated)",
-            Field::SelecteeIndicator => 
+            Field::SelecteeIndicator =>
                 "Selectee Indicator",
-            Field::MarketingCarrierDesignator => 
+            Field::MarketingCarrierDesignator =>
                 "Marketing Carrier Designator",
-            Field::FrequentFlyerAirlineDesignator => 
+            Field::FrequentFlyerAirlineDesignator =>
                 "Frequent Flyer Airline Designator",
-            Field::AirlineDesignatorOfBoardingPassIssuer => 
+            Field::AirlineDesignatorOfBoardingPassIssuer =>
                 "Airline Designator of Boarding Pass Issuer",
-            Field::DateOfIssueOfBoardingPass => 
+            Field::DateOfIssueOfBoardingPass =>
                 "Date of Issue of Boarding Pass",
-            Field::BaggageTagLicensePlateNumbers => 
+            Field::BaggageTagLicensePlateNumbers =>
                 "Baggage Tag License Plate Number(s)",
-            Field::BeginningOfSecurityData => 
+            Field::BeginningOfSecurityData =>
                 "Beginning of Security Data",
-            Field::FromCityAirportCode => 
+            Field::FromCityAirportCode =>
                 "From City Airport Code",
-            Field::TypeOfSecurityData => 
+            Field::TypeOfSecurityData =>
                 "Type of Security Data",
-            Field::LengthOfSecurityData => 
+            Field::LengthOfSecurityData =>
                 "Length of Security Data",
-            Field::SecurityData => 
+            Field::SecurityData =>
                 "Security Data",
             Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers =>
                 "First Non-Consecutive Baggage Tag License Plate Number",
             Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers =>
                 "Second Non-Consecutive Baggage Tag License Plate Number",
-            Field::ToCityAirportCode => 
+            Field::ToCityAirportCode =>
                 "To City Airport Code",
-            Field::OperatingCarrierDesignator => 
+            Field::OperatingCarrierDesignator =>
                 "Operating Carrier Designator",
-            Field::FlightNumber => 
+            Field::FlightNumber =>
                 "Flight Number",
-            Field::DateOfFlight => 
+            Field::DateOfFlight =>
                 "Date of Flight",
-            Field::CompartmentCode => 
+            Field::CompartmentCode =>
                 "Compartment Code",
-            Field::IdAdIndicator => 
+            Field::IdAdIndicator =>
                 "ID/AD Indicator",
-            Field::SeatNumber => 
+            Field::SeatNumber =>
                 "Seat Number",
-            Field::CheckInSequenceNumber => 
+            Field::CheckInSequenceNumber =>
                 "Check-In Sequence Number",
-            Field::InternationalDocumentVerification => 
+            Field::InternationalDocumentVerification =>
                 "International Document Verification",
-            Field::PassengerStatus => 
+            Field::PassengerStatus =>
                 "Passenger Status",
-            Field::FreeBaggageAllowance => 
+            Field::FreeBaggageAllowance =>
                 "Free Baggage Allowance",
-            Field::AirlineNumericCode => 
+            Field::AirlineNumericCode =>
                 "Airline Numeric Code",
-            Field::DocumentFormSerialNumber => 
+            Field::DocumentFormSerialNumber =>
                 "Document Form / Serial Number",
-            Field::FrequentFlyerNumber => 
+            Field::FrequentFlyerNumber =>
                 "Frequent Flyer Number",
-            Field::ElectronicTicketIndicator => 
+            Field::ElectronicTicketIndicator =>
                 "Electronic Ticket Indicator",
-            Field::FastTrack => 
+            Field::FastTrack =>
                 "Fast Track",
         }
     }
-
 }
 
 impl fmt::Display for Field {

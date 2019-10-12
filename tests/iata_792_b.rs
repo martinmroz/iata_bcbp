@@ -54,7 +54,8 @@ fn example_2_m2_multiple_legs() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 2.
+    {
+        // Fields in leg 1 of 2.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "ABC123 ");
         assert_eq!(first_leg.from_city_airport_code(), "YUL");
@@ -80,7 +81,8 @@ fn example_2_m2_multiple_legs() {
         assert_eq!(first_leg.airline_individual_use(), Some("LX58Z"));
     }
 
-    { // Fields in leg 2 of 2.
+    {
+        // Fields in leg 2 of 2.
         let second_leg = &pass_data.legs()[1];
         assert_eq!(second_leg.operating_carrier_pnr_code(), "DEF456 ");
         assert_eq!(second_leg.from_city_airport_code(), "FRA");
@@ -128,7 +130,8 @@ fn appendix_b_1_1_lh_home_printed_boarding_pass() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 1.
+    {
+        // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "8OQ6FU ");
         assert_eq!(first_leg.from_city_airport_code(), "FRA");
@@ -169,7 +172,8 @@ fn appendix_b_1_2_kl_home_printed_boarding_pass() {
     assert_eq!(pass_data.source_of_check_in(), Some(' '));
     assert_eq!(pass_data.source_of_boarding_pass_issuance(), Some('W'));
 
-    { // Fields in leg 1 of 1.
+    {
+        // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "24Z5RN ");
         assert_eq!(first_leg.from_city_airport_code(), "AMS");
@@ -205,7 +209,8 @@ fn appendix_b_2_1_bcbp_printed_at_a_kiosk_ua_ua_kiosk() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 1.
+    {
+        // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "A272SL ");
         assert_eq!(first_leg.from_city_airport_code(), "ORD");
@@ -252,7 +257,8 @@ fn appendix_b_3_1_mobile_bcbp_lh_lufthansa_mobile_bcbp() {
     assert_eq!(pass_data.first_non_consecutive_baggage_tag_license_plate_numbers(), None);
     assert_eq!(pass_data.second_non_consecutive_baggage_tag_license_plate_numbers(), None);
 
-    { // Fields in leg 1 of 1.
+    {
+        // Fields in leg 1 of 1.
         let first_leg = &pass_data.legs()[0];
         assert_eq!(first_leg.operating_carrier_pnr_code(), "8OQ6FU ");
         assert_eq!(first_leg.from_city_airport_code(), "FRA");
