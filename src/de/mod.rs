@@ -5,11 +5,11 @@
 
 use std::str::FromStr;
 
-pub mod field;
+mod field;
 mod parser;
 
-use bcbp;
-use error::{Error, Result};
+use crate::bcbp;
+use crate::error::{Error, Result};
 
 pub use self::parser::from_str;
 

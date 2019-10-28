@@ -8,6 +8,7 @@ license = "MIT"
 readme = "README.md"
 documentation = "https://martinmroz.github.io/iata_bcbp/master/iata_bcbp/"
 description = "IATA BCBP Parser in Rust Based on Resolution 792"
+edition = "2018"
 
 [dependencies]
 arrayvec = "0.4"

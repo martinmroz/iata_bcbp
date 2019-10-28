@@ -3,9 +3,9 @@
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
-use bcbp;
-use de::field;
-use error::{Error, Result};
+use crate::bcbp::{Bcbp, ConditionalMetadata, Leg, SecurityData};
+use crate::de::field;
+use crate::error::{Error, Result};
 
 use arrayvec::{Array, ArrayString};
 use nom::{
@@ -153,7 +153,7 @@ fn optional_chr_field<'a, Error: ParseError<&'a str>>(
 }
 
 /// Parses conditional metadata potentially embedded in the first leg.
-fn conditional_metadata<'a>(input: &'a str) -> IResult<&'a str, bcbp::ConditionalMetadata, VerboseError<&'a str>> {
+fn conditional_metadata<'a>(input: &'a str) -> IResult<&'a str, ConditionalMetadata, VerboseError<&'a str>> {
     let (input, version_number) = optional_version_number(input)?;
 
     // Conditional metadata is encoded in an optional variable-size field.
@@ -187,7 +187,7 @@ fn conditional_metadata<'a>(input: &'a str) -> IResult<&'a str, bcbp::Conditiona
     // any fields added in the future not recognized by this parser are skipped over.
     Ok((
         remainder,
-        bcbp::ConditionalMetadata {
+        ConditionalMetadata {
             version_number,
             passenger_description,
             source_of_check_in,
@@ -210,7 +210,7 @@ fn conditional_metadata<'a>(input: &'a str) -> IResult<&'a str, bcbp::Conditiona
 fn leg<'a>(
     input: &'a str,
     is_first_leg: bool
-) -> IResult<&'a str, (bcbp::Leg, Option<bcbp::ConditionalMetadata>), VerboseError<&'a str>> {
+) -> IResult<&'a str, (Leg, Option<ConditionalMetadata>), VerboseError<&'a str>> {
     // Parse mandatory fields common to all legs.
     let (input, (
         operating_carrier_pnr_code,
@@ -283,7 +283,7 @@ fn leg<'a>(
         None
     };
 
-    let leg = bcbp::Leg {
+    let leg = Leg {
         operating_carrier_pnr_code,
         from_city_airport_code,
         to_city_airport_code,
@@ -311,7 +311,7 @@ fn leg<'a>(
 }
 
 /// Parses a Security Data section.
-fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, VerboseError<&'a str>> {
+fn security_data<'a>(input: &'a str) -> IResult<&'a str, SecurityData, VerboseError<&'a str>> {
     if input.len() == 0 {
         return Ok((input, Default::default()));
     }
@@ -336,7 +336,7 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
 
     Ok((
         remainder,
-        bcbp::SecurityData {
+        SecurityData {
             type_of_security_data: Some(type_of_security_data),
             security_data: security_data
         }
@@ -346,7 +346,7 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
 /// Parses a boarding pass from `input`.
 ///
 /// The input must contain only valid ASCII characters.
-fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str>> {
+fn bcbp<'a>(input: &'a str) -> IResult<&'a str, Bcbp, VerboseError<&'a str>> {
     // Scan mandatory unique fields including the format code and the number of legs encoded.
     let (input, (
         _,
@@ -387,7 +387,7 @@ fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str
 
     Ok((
         remainder,
-        bcbp::Bcbp {
+        Bcbp {
             passenger_name,
             electronic_ticket_indicator,
             metadata,
@@ -398,7 +398,7 @@ fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str
 }
 
 /// Parses a boarding pass from `input_data` representable as a string reference.
-pub fn from_str<I>(input_data: I) -> Result<bcbp::Bcbp>
+pub fn from_str<I>(input_data: I) -> Result<Bcbp>
 where
     I: AsRef<str>,
 {
