@@ -1,12 +1,12 @@
-// Copyright (C) 2018 Martin Mroz
+// Copyright (C) 2019 Martin Mroz
 //
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
 //! `iata_bcbp` is a Rust library for parsing IATA BCBP Type M
-//! objects conforming to versions 2 through 6 of the standard inclusively. 
-//! This format is used by airlines to encode boarding pass information into 
-//! electronic ticket itinerary document barcodes in addition to paper and 
+//! objects conforming to versions 2 through 6 of the standard inclusively.
+//! This format is used by airlines to encode boarding pass information into
+//! electronic ticket itinerary document barcodes in addition to paper and
 //! mobile boarding passes.
 //!
 //! # Example
@@ -14,7 +14,7 @@
 //! extern crate iata_bcbp;
 //!
 //! use std::str::FromStr;
-//! 
+//!
 //! use iata_bcbp::Bcbp;
 //!
 //! fn main() {
@@ -35,13 +35,13 @@
 //! }
 //! ```
 
-#[macro_use]
-extern crate log;
+extern crate arrayvec;
+extern crate nom;
 
 mod bcbp;
 mod de;
 mod error;
 
 pub use bcbp::{Bcbp, Leg, SecurityData};
-pub use de::{from_str, field::Field};
+pub use de::from_str;
 pub use error::{Error, Result};

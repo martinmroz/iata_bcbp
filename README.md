@@ -19,7 +19,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-iata_bcbp = "0.1"
+iata_bcbp = "1.0"
 ```
 
 In addition, and this to your crate root:

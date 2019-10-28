@@ -1,15 +1,15 @@
-// Copyright (C) 2018 Martin Mroz
+// Copyright (C) 2019 Martin Mroz
 //
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
 use std::str::FromStr;
 
-pub mod field;
+mod field;
 mod parser;
 
-use bcbp;
-use error::{Error, Result};
+use crate::bcbp;
+use crate::error::{Error, Result};
 
 pub use self::parser::from_str;
 

@@ -1,35 +1,36 @@
-// Copyright (C) 2018 Martin Mroz
+// Copyright (C) 2019 Martin Mroz
 //
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
 
-#[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
+use arrayvec::ArrayString;
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub struct Leg {
-    pub(crate) operating_carrier_pnr_code: String,
-    pub(crate) from_city_airport_code: String,
-    pub(crate) to_city_airport_code: String,
-    pub(crate) operating_carrier_designator: String,
-    pub(crate) flight_number: String,
-    pub(crate) date_of_flight: String,
+    pub(crate) operating_carrier_pnr_code: ArrayString<[u8; 7]>,
+    pub(crate) from_city_airport_code: ArrayString<[u8; 3]>,
+    pub(crate) to_city_airport_code: ArrayString<[u8; 3]>,
+    pub(crate) operating_carrier_designator: ArrayString<[u8; 3]>,
+    pub(crate) flight_number: ArrayString<[u8; 5]>,
+    pub(crate) date_of_flight: ArrayString<[u8; 3]>,
     pub(crate) compartment_code: char,
-    pub(crate) seat_number: String,
-    pub(crate) check_in_sequence_number: String,
+    pub(crate) seat_number: ArrayString<[u8; 4]>,
+    pub(crate) check_in_sequence_number: ArrayString<[u8; 5]>,
     pub(crate) passenger_status: char,
-    pub(crate) airline_numeric_code: Option<String>,
-    pub(crate) document_form_serial_number: Option<String>,
+    pub(crate) airline_numeric_code: Option<ArrayString<[u8; 3]>>,
+    pub(crate) document_form_serial_number: Option<ArrayString<[u8; 10]>>,
     pub(crate) selectee_indicator: Option<char>,
     pub(crate) international_document_verification: Option<char>,
-    pub(crate) marketing_carrier_designator: Option<String>,
-    pub(crate) frequent_flyer_airline_designator: Option<String>,
-    pub(crate) frequent_flyer_number: Option<String>,
+    pub(crate) marketing_carrier_designator: Option<ArrayString<[u8; 3]>>,
+    pub(crate) frequent_flyer_airline_designator: Option<ArrayString<[u8; 3]>>,
+    pub(crate) frequent_flyer_number: Option<ArrayString<[u8; 16]>>,
     pub(crate) id_ad_indicator: Option<char>,
-    pub(crate) free_baggage_allowance: Option<String>,
+    pub(crate) free_baggage_allowance: Option<ArrayString<[u8; 3]>>,
     pub(crate) fast_track: Option<char>,
     pub(crate) airline_individual_use: Option<String>,
 }
 
 impl Leg {
-
     /// An alphanumeric string of up to 6 characters, left-aligned, space-padded.
     /// This is the Passenger Name Record used to identify the booking
     /// in the reservation system of the operating carrier.
@@ -50,14 +51,16 @@ impl Leg {
     pub fn to_city_airport_code(&self) -> &str {
         &self.to_city_airport_code
     }
-    
+
     /// Airline code of the marketing carrier, which can be the same as the operating carrier.
     /// Two-character and three-letter IATA carrier designators
     /// are permitted and the string is left-justified and space padded.
     /// Spaces indicate the field is not set.
     /// Any other values are invalid.
     pub fn marketing_carrier_designator(&self) -> Option<&str> {
-        self.marketing_carrier_designator.as_ref().map(|x| &**x)
+        self.marketing_carrier_designator
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// Airline code associated with the frequent flyer number.
@@ -66,7 +69,9 @@ impl Leg {
     /// Spaces indicate the field is not set.
     /// Any other values are invalid.
     pub fn frequent_flyer_airline_designator(&self) -> Option<&str> {
-        self.frequent_flyer_airline_designator.as_ref().map(|x| &**x)
+        self.frequent_flyer_airline_designator
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// 2 character or 3 letter airline designator followed by up to 13 numerics or
@@ -74,7 +79,9 @@ impl Leg {
     /// Spaces indicate the field is not set.
     /// Any other values are invalid.
     pub fn frequent_flyer_number(&self) -> Option<&str> {
-        self.frequent_flyer_number.as_ref().map(|x| &**x)
+        self.frequent_flyer_number
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// Values are defined in Resolution 792.
@@ -141,14 +148,18 @@ impl Leg {
     /// This is also the first three digits of the eTicket number.
     /// Spaces indicate the field is not set.
     pub fn airline_numeric_code(&self) -> Option<&str> {
-        self.airline_numeric_code.as_ref().map(|x| &**x)
+        self.airline_numeric_code
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// The ten-digit DSN.
     /// This is also the last ten digits of the eTicket number.
     /// Spaces indicate the field is not set.
     pub fn document_form_serial_number(&self) -> Option<&str> {
-        self.document_form_serial_number.as_ref().map(|x| &**x)
+        self.document_form_serial_number
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// This field is used by certain agencies to demarcate individuals requiring extra screening.
@@ -177,25 +188,27 @@ impl Leg {
     /// indicating how much baggage passengers are able to take with them free of charge.
     /// Spaces indicate the field is not set.
     pub fn free_baggage_allowance(&self) -> Option<&str> {
-        self.free_baggage_allowance.as_ref().map(|x| &**x)
+        self.free_baggage_allowance
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// Optional unstructured data for airline individual use.
     /// Content frequently includes frequent flyer tier, passenger preferences, etc.
     pub fn airline_individual_use(&self) -> Option<&str> {
-        self.airline_individual_use.as_ref().map(|x| &**x)
+        self.airline_individual_use
+            .as_ref()
+            .map(|x| x.as_str())
     }
-
 }
 
-#[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub struct SecurityData {
     pub(crate) type_of_security_data: Option<char>,
     pub(crate) security_data: Option<String>,
 }
 
 impl SecurityData {
-
     /// Vendor specific flag indicating the type of the security data which follows.
     pub fn type_of_security_data(&self) -> Option<char> {
         self.type_of_security_data
@@ -203,30 +216,36 @@ impl SecurityData {
 
     /// Security data used to verify the boarding pass was not tampered with.
     pub fn security_data(&self) -> Option<&str> {
-        self.security_data.as_ref().map(|x| &**x)
+        self.security_data
+            .as_ref()
+            .map(|x| x.as_str())
     }
-
 }
 
-#[derive(Clone,Eq,PartialEq,Hash,Debug,Default)]
-pub struct Bcbp {
-    pub(crate) passenger_name: String,
-    pub(crate) electronic_ticket_indicator: char,
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+pub(crate) struct ConditionalMetadata {
+    pub(crate) version_number: Option<char>,
     pub(crate) passenger_description: Option<char>,
     pub(crate) source_of_check_in: Option<char>,
     pub(crate) source_of_boarding_pass_issuance: Option<char>,
-    pub(crate) date_of_issue_of_boarding_pass: Option<String>,
+    pub(crate) date_of_issue_of_boarding_pass: Option<ArrayString<[u8; 4]>>,
     pub(crate) document_type: Option<char>,
-    pub(crate) airline_designator_of_boarding_pass_issuer: Option<String>,
-    pub(crate) baggage_tag_license_plate_numbers: Option<String>,
-    pub(crate) first_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
-    pub(crate) second_non_consecutive_baggage_tag_license_plate_numbers: Option<String>,
+    pub(crate) airline_designator_of_boarding_pass_issuer: Option<ArrayString<[u8; 3]>>,
+    pub(crate) baggage_tag_license_plate_numbers: Option<ArrayString<[u8; 13]>>,
+    pub(crate) first_non_consecutive_baggage_tag_license_plate_numbers: Option<ArrayString<[u8; 13]>>,
+    pub(crate) second_non_consecutive_baggage_tag_license_plate_numbers: Option<ArrayString<[u8; 13]>>,
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+pub struct Bcbp {
+    pub(crate) passenger_name: ArrayString<[u8; 20]>,
+    pub(crate) electronic_ticket_indicator: char,
+    pub(crate) metadata: ConditionalMetadata,
     pub(crate) legs: Vec<Leg>,
     pub(crate) security_data: SecurityData,
 }
 
 impl Bcbp {
-
     /// All legs encoded into the boarding pass.
     /// At least one needs to be present to form a valid boarding pass.
     pub fn legs(&self) -> &[Leg] {
@@ -244,14 +263,22 @@ impl Bcbp {
     pub fn electronic_ticket_indicator(&self) -> char {
         self.electronic_ticket_indicator
     }
-    
+
+    /// Indicates the version number of the BCBP object.
+    /// Values are defined in Resolution 792.
+    /// None indicates the value was not specified in the object.
+    /// Some space literal indicates the field existed in the object but was not set.
+    pub fn version_number(&self) -> Option<char> {
+        self.metadata.version_number
+    }
+
     /// This describes the passenger.
     /// Values are defined in Resolution 792.
     /// Spaces indicate the field is not set.
     pub fn passenger_description(&self) -> Option<char> {
-        self.passenger_description
+        self.metadata.passenger_description
     }
-    
+
     /// The name of the passenger. Up to 20 characters, left-aligned, space padded.
     /// The format is `LAST_NAME/FIRST_NAME[TITLE]`. There is no separator between
     /// the first name and the title, and no indication a title is present.
@@ -266,31 +293,34 @@ impl Bcbp {
     /// Values are defined in Resolution 792 Attachment C.
     /// Spaces indicate the field is not set.
     pub fn source_of_check_in(&self) -> Option<char> {
-        self.source_of_check_in
+        self.metadata.source_of_check_in
     }
 
     /// This field reflects channel which issued the boarding pass.
     /// Values are defined in Resolution 792.
     /// Spaces indicate the field is not set.
     pub fn source_of_boarding_pass_issuance(&self) -> Option<char> {
-        self.source_of_boarding_pass_issuance
+        self.metadata.source_of_boarding_pass_issuance
     }
 
     /// Optionally the 4-digit Julian date representing when the boarding pass
     /// was issued. The first digit is the last digit of the year and the next three
     /// represent the number of days elapsed.
     /// For example:
-    ///   "6001" represnts January 1, 2016.
-    ///   "6366" represaents December 31, 2016 (a leap year).
+    ///   "6001" represents January 1, 2016.
+    ///   "6366" represents December 31, 2016 (a leap year).
     /// Spaces indicate the field is not set.
     pub fn date_of_issue_of_boarding_pass(&self) -> Option<&str> {
-        self.date_of_issue_of_boarding_pass.as_ref().map(|x| &**x)
+        self.metadata
+            .date_of_issue_of_boarding_pass
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// The type of the document, 'B' indicating a boarding pass.
     /// Spaces indicate the field is not set.
     pub fn document_type(&self) -> Option<char> {
-        self.document_type
+        self.metadata.document_type
     }
 
     /// Airline code of the boarding pass issuer.
@@ -298,7 +328,10 @@ impl Bcbp {
     /// are permitted and the string is left-justified and space padded.
     /// Spaces indicate the field is not set.
     pub fn airline_designator_of_boarding_pass_issuer(&self) -> Option<&str> {
-        self.airline_designator_of_boarding_pass_issuer.as_ref().map(|x| &**x)
+        self.metadata
+            .airline_designator_of_boarding_pass_issuer
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// This field allows carriers to populate baggage tag numbers and the number
@@ -309,21 +342,29 @@ impl Bcbp {
     ///   11...13: number of consecutive bags (up to 999).
     /// Spaces indicate the field is not set.
     pub fn baggage_tag_license_plate_numbers(&self) -> Option<&str> {
-        self.baggage_tag_license_plate_numbers.as_ref().map(|x| &**x)
+        self.metadata
+            .baggage_tag_license_plate_numbers
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// This field allows carriers who handle non-sequential bags to include a second set of them
     /// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.
     /// Spaces indicate the field is not set.
     pub fn first_non_consecutive_baggage_tag_license_plate_numbers(&self) -> Option<&str> {
-        self.first_non_consecutive_baggage_tag_license_plate_numbers.as_ref().map(|x| &**x)
+        self.metadata
+            .first_non_consecutive_baggage_tag_license_plate_numbers
+            .as_ref()
+            .map(|x| x.as_str())
     }
 
     /// This field allows carriers who handle non-sequential bags to include a third set of them
     /// in the boarding pass data in in the same format as `baggage_tag_license_plate_numbers`.
     /// Spaces indicate the field is not set.
     pub fn second_non_consecutive_baggage_tag_license_plate_numbers(&self) -> Option<&str> {
-        self.second_non_consecutive_baggage_tag_license_plate_numbers.as_ref().map(|x| &**x)
+        self.metadata
+            .second_non_consecutive_baggage_tag_license_plate_numbers
+            .as_ref()
+            .map(|x| x.as_str())
     }
-
 }
