@@ -11,8 +11,9 @@ use arrayvec::{Array, ArrayString};
 use nom::{
     bytes::complete::{take, take_while_m_n},
     character::complete::{anychar, char},
-    combinator::map_res,
-    error::{context, convert_error, VerboseError},
+    combinator::{map, map_res},
+    error::{context, convert_error, ParseError, VerboseError},
+    sequence::tuple,
     IResult,
 };
 
@@ -21,19 +22,18 @@ fn is_ascii_uppercase_hexdigit(c: char) -> bool {
     c.is_ascii_hexdigit() && !c.is_ascii_lowercase()
 }
 
-/// Parses a one- or two-digit ASCII uppercase hexadecimal string literal value.
+/// Returns a parser for a one- or two-digit ASCII uppercase hexadecimal string literal value.
 ///
 /// # Notes
 /// - Does not provide additional context.
-fn hex_byte_literal<'a>(
-    input: &'a str,
-    length: usize,
-) -> IResult<&'a str, u8, VerboseError<&'a str>> {
+fn hex_byte_literal<'a, Error: ParseError<&'a str>>(
+    length: usize
+) -> impl Fn(&'a str) -> IResult<&'a str, u8, Error> {
     assert!(length == 1 || length == 2);
     map_res(
         take_while_m_n(length, length, is_ascii_uppercase_hexdigit),
         |s: &str| u8::from_str_radix(s, 16),
-    )(input)
+    )
 }
 
 /// Parses a variable-length field whose size data is in the specified first field.
@@ -41,9 +41,9 @@ fn variable_size_field_data<'a>(
     input: &'a str, 
     field_id: field::Field
 ) -> IResult<&'a str, &'a str, VerboseError<&'a str>> {
-    let (remainder, length) = context(field_id.name(), |input| {
-        hex_byte_literal(input, 2)
-    })(input)?;
+    let (remainder, length) = context(field_id.name(), 
+        hex_byte_literal(2)
+    )(input)?;
 
     match length {
         0 => Ok((remainder, &input[0 .. 0])),
@@ -65,9 +65,9 @@ fn optional_variable_size_field_data<'a>(
 
 /// Parses the field encoding the number of legs embedded in the BCBP data.
 fn number_of_legs<'a>(input: &'a str) -> IResult<&'a str, u8, VerboseError<&'a str>> {
-    context(field::Field::NumberOfLegsEncoded.name(), |input| {
-        hex_byte_literal(input, 1)
-    })(input)
+    context(field::Field::NumberOfLegsEncoded.name(),
+        hex_byte_literal(1)
+    )(input)
 }
 
 /// Parses the format code specifier tag for an M-type IATA BCBP pass.
@@ -89,70 +89,72 @@ fn optional_version_number<'a>(input: &'a str) -> IResult<&'a str, Option<char>,
     )(input)?;
 
     // Consume and return the version number character.
-    optional_character_field(input, field::Field::VersionNumber)
+    optional_chr_field(field::Field::VersionNumber)(input)
 }
 
-/// Parses a fixed-length String-type field.
-fn string_field<'a, T>(
-    input: &'a str,
-    field_id: field::Field,
-) -> IResult<&'a str, ArrayString<T>, VerboseError<&'a str>>
+/// Returns a parser for a specified field returning an `ArrayString` over its length.
+fn str_field<'a, T, Error: ParseError<&'a str>>(
+    field_id: field::Field
+) -> impl Fn(&'a str) -> IResult<&'a str, ArrayString<T>, Error>
 where
     T: Array<Item = u8> + Copy,
 {
     // Verify that the size of the storage array matches the field exactly.
     assert_eq!(std::mem::size_of::<T>(), field_id.len());
 
-    // Copies bytes equal to the length of the specified field into an ArrayString.
-    let parse_field = map_res(
-        take(field_id.len()), 
-        |s: &str| ArrayString::from(s)
-    );
-
-    // Ascribe the name of the field as context for the operation.
-    context(field_id.name(), parse_field)(input)
+    // Returns a parser 
+    context(field_id.name(),
+        map_res(
+            take(field_id.len()), 
+            |s: &str| ArrayString::from(s)
+        )
+    )
 }
 
-/// Parses an optional fixed-length String-type field within a variable-length section.
+/// Returns a parser for an optional fixed-length String-type field within a variable-length section.
 ///
 /// # Notes
-/// - This function will succeed and return None if the remaining length of the string is zero.
-/// - This function will fail if the remaining length of the string is less than that of the requested field.
-fn optional_string_field<'a, T>(
-    input: &'a str,
-    field_id: field::Field,
-) -> IResult<&'a str, Option<ArrayString<T>>, VerboseError<&'a str>>
+/// - The parser will succeed and return None if the remaining length of the string is zero.
+/// - The parser will fail if the remaining length of the string is less than that of the requested field.
+fn optional_str_field<'a, T, Error: ParseError<&'a str>>(
+    field_id: field::Field
+) -> impl Fn(&'a str) -> IResult<&'a str, Option<ArrayString<T>>, Error>
 where
     T: Array<Item = u8> + Copy,
 {
-    if input.len() == 0 {
-        Ok((input, None))
-    } else {
-        string_field(input, field_id).map(|(input, field)| (input, Some(field)))
+    move |input: &'a str| {
+        if input.len() == 0 {
+            Ok((input, None))
+        } else {
+            str_field(field_id)(input).map(|(input, field)| (input, Some(field)))
+        }
     }
 }
 
-/// Parses a single-character field.
-fn character_field<'a>(
-    input: &'a str,
-    field_id: field::Field,
-) -> IResult<&'a str, char, VerboseError<&'a str>> {
+/// Returns a parser for a specified single-character field yielding a `char`.
+fn chr_field<'a, Error: ParseError<&'a str>>(
+    field_id: field::Field
+) -> impl Fn(&'a str) -> IResult<&'a str, char, Error> {
     assert_eq!(field_id.len(), 1);
-    context(field_id.name(), anychar)(input)
+    context(field_id.name(), anychar)
 }
 
-/// Parses an optional single-character field within a variable-length section.
+/// Returns a parser for an optional single-character field within a variable-length section.
 ///
 /// # Notes
-/// - This function will succeed and return None if the remaining length of the string is zero.
-fn optional_character_field<'a>(
-    input: &'a str,
-    field_id: field::Field,
-) -> IResult<&'a str, Option<char>, VerboseError<&'a str>> {
-    if input.len() == 0 {
-        Ok((input, None))
-    } else {
-        character_field(input, field_id).map(|(input, field)| (input, Some(field)))
+/// - The parser will succeed and return None if the remaining length of the string is zero.
+fn optional_chr_field<'a, Error: ParseError<&'a str>>(
+    field_id: field::Field
+) -> impl Fn(&'a str) -> IResult<&'a str, Option<char>, Error> {
+    move |input: &'a str| {
+        if input.len() == 0 {
+            Ok((input, None))
+        } else {
+            map(
+                chr_field(field_id),
+                |c: char| Some(c)
+            )(input)
+        }
     }
 }
 
@@ -161,29 +163,34 @@ fn conditional_metadata<'a>(input: &'a str) -> IResult<&'a str, bcbp::Conditiona
     let (input, version_number) = optional_version_number(input)?;
 
     // Conditional metadata is encoded in an optional variable-size field.
-    let (remainder, conditional_item_data) = 
+    let (remainder, conditional_item_data) =
         optional_variable_size_field_data(input, field::Field::FieldSizeOfStructuredMessageUnique)?;
 
     // Each field is optional, and encoded within the conditional item data section.
-    let (conditional_item_data, passenger_description) =
-        optional_character_field(conditional_item_data, field::Field::PassengerStatus)?;
-    let (conditional_item_data, source_of_check_in) =
-        optional_character_field(conditional_item_data, field::Field::SourceOfCheckIn)?;
-    let (conditional_item_data, source_of_boarding_pass_issuance) =
-        optional_character_field(conditional_item_data, field::Field::SourceOfBoardingPassIssuance)?;
-    let (conditional_item_data, date_of_issue_of_boarding_pass) =
-        optional_string_field(conditional_item_data, field::Field::DateOfIssueOfBoardingPass)?;
-    let (conditional_item_data, document_type) =
-        optional_character_field(conditional_item_data, field::Field::DocumentType)?;
-    let (conditional_item_data, airline_designator_of_boarding_pass_issuer) =
-        optional_string_field(conditional_item_data, field::Field::AirlineDesignatorOfBoardingPassIssuer)?;
-    let (conditional_item_data, baggage_tag_license_plate_numbers) =
-        optional_string_field(conditional_item_data, field::Field::BaggageTagLicensePlateNumbers)?;
-    let (conditional_item_data, first_non_consecutive_baggage_tag_license_plate_numbers) =
-        optional_string_field(conditional_item_data, field::Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers)?;
-    let (_, second_non_consecutive_baggage_tag_license_plate_numbers) =
-        optional_string_field(conditional_item_data, field::Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers)?;
+    let (_, (
+        passenger_description,
+        source_of_check_in,
+        source_of_boarding_pass_issuance,
+        date_of_issue_of_boarding_pass,
+        document_type,
+        airline_designator_of_boarding_pass_issuer,
+        baggage_tag_license_plate_numbers,
+        first_non_consecutive_baggage_tag_license_plate_numbers,
+        second_non_consecutive_baggage_tag_license_plate_numbers,
+    )) = tuple((
+        optional_chr_field(field::Field::PassengerStatus),
+        optional_chr_field(field::Field::SourceOfCheckIn),
+        optional_chr_field(field::Field::SourceOfBoardingPassIssuance),
+        optional_str_field(field::Field::DateOfIssueOfBoardingPass),
+        optional_chr_field(field::Field::DocumentType),
+        optional_str_field(field::Field::AirlineDesignatorOfBoardingPassIssuer),
+        optional_str_field(field::Field::BaggageTagLicensePlateNumbers),
+        optional_str_field(field::Field::FirstNonConsecutiveBaggageTagLicensePlateNumbers),
+        optional_str_field(field::Field::SecondNonConsecutiveBaggageTagLicensePlateNumbers),
+    ))(conditional_item_data)?;
 
+    // The remainder not encluded in the conditional item data section is returned meaning
+    // any fields added in the future not recognized by this parser are skipped over.
     Ok((
         remainder,
         bcbp::ConditionalMetadata {
@@ -210,27 +217,30 @@ fn leg<'a>(
     input: &'a str,
     is_first_leg: bool
 ) -> IResult<&'a str, (bcbp::Leg, Option<bcbp::ConditionalMetadata>), VerboseError<&'a str>> {
-    // Mandatory items common to all legs.
-    let (input, operating_carrier_pnr_code) =
-        string_field(input, field::Field::OperatingCarrierPnrCode)?;
-    let (input, from_city_airport_code) =
-        string_field(input, field::Field::FromCityAirportCode)?;
-    let (input, to_city_airport_code) =
-        string_field(input, field::Field::ToCityAirportCode)?;
-    let (input, operating_carrier_designator) =
-        string_field(input, field::Field::OperatingCarrierDesignator)?;
-    let (input, flight_number) =
-        string_field(input, field::Field::FlightNumber)?;
-    let (input, date_of_flight) =
-        string_field(input, field::Field::DateOfFlight)?;
-    let (input, compartment_code) =
-        character_field(input, field::Field::CompartmentCode)?;
-    let (input, seat_number) =
-        string_field(input, field::Field::SeatNumber)?;
-    let (input, check_in_sequence_number) =
-        string_field(input, field::Field::CheckInSequenceNumber)?;
-    let (input, passenger_status) =
-        character_field(input, field::Field::PassengerStatus)?;
+    // Parse mandatory fields common to all legs.
+    let (input, (
+        operating_carrier_pnr_code,
+        from_city_airport_code,
+        to_city_airport_code,
+        operating_carrier_designator,
+        flight_number,
+        date_of_flight,
+        compartment_code,
+        seat_number,
+        check_in_sequence_number,
+        passenger_status,
+    )) = tuple((
+        str_field(field::Field::OperatingCarrierPnrCode),
+        str_field(field::Field::FromCityAirportCode),
+        str_field(field::Field::ToCityAirportCode),
+        str_field(field::Field::OperatingCarrierDesignator),
+        str_field(field::Field::FlightNumber),
+        str_field(field::Field::DateOfFlight),
+        chr_field(field::Field::CompartmentCode),
+        str_field(field::Field::SeatNumber),
+        str_field(field::Field::CheckInSequenceNumber),
+        chr_field(field::Field::PassengerStatus),
+    ))(input)?;
 
     // A set of conditional items may follow the required items for each leg.
     let (remainder, conditional_item_data) =
@@ -238,7 +248,7 @@ fn leg<'a>(
 
     // Top-level conditional metadata may be embedded in the first leg.
     let (conditional_item_data, optional_conditional_metadata) = if is_first_leg {
-        conditional_metadata(conditional_item_data).map(|(input, data)| (input, Some(data)))?
+        map(conditional_metadata, |data| Some(data))(conditional_item_data)?
     } else {
         (conditional_item_data, None)
     };
@@ -248,26 +258,29 @@ fn leg<'a>(
         optional_variable_size_field_data(conditional_item_data, field::Field::FieldSizeOfStructuredMessageRepeated)?;
 
     // Conditional leg data is encoded in an optional variable-size field.
-    let (conditional_item_data, airline_numeric_code) =
-        optional_string_field(conditional_item_data, field::Field::AirlineNumericCode)?;
-    let (conditional_item_data, document_form_serial_number) =
-        optional_string_field(conditional_item_data, field::Field::DocumentFormSerialNumber)?;
-    let (conditional_item_data, selectee_indicator) =
-        optional_character_field(conditional_item_data, field::Field::SelecteeIndicator)?;
-    let (conditional_item_data, international_document_verification) =
-        optional_character_field(conditional_item_data, field::Field::InternationalDocumentVerification)?;
-    let (conditional_item_data, marketing_carrier_designator) =
-        optional_string_field(conditional_item_data, field::Field::MarketingCarrierDesignator)?;
-    let (conditional_item_data, frequent_flyer_airline_designator) =
-        optional_string_field(conditional_item_data, field::Field::FrequentFlyerAirlineDesignator)?;
-    let (conditional_item_data, frequent_flyer_number) =
-        optional_string_field(conditional_item_data, field::Field::FrequentFlyerNumber)?;
-    let (conditional_item_data, id_ad_indicator) =
-        optional_character_field(conditional_item_data, field::Field::IdAdIndicator)?;
-    let (conditional_item_data, free_baggage_allowance) =
-        optional_string_field(conditional_item_data, field::Field::FreeBaggageAllowance)?;
-    let (_, fast_track) =
-        optional_character_field(conditional_item_data, field::Field::FastTrack)?;
+    let (_, (
+        airline_numeric_code,
+        document_form_serial_number,
+        selectee_indicator,
+        international_document_verification,
+        marketing_carrier_designator,
+        frequent_flyer_airline_designator,
+        frequent_flyer_number,
+        id_ad_indicator,
+        free_baggage_allowance,
+        fast_track,
+    )) = tuple((
+        optional_str_field(field::Field::AirlineNumericCode),
+        optional_str_field(field::Field::DocumentFormSerialNumber),
+        optional_chr_field(field::Field::SelecteeIndicator),
+        optional_chr_field(field::Field::InternationalDocumentVerification),
+        optional_str_field(field::Field::MarketingCarrierDesignator),
+        optional_str_field(field::Field::FrequentFlyerAirlineDesignator),
+        optional_str_field(field::Field::FrequentFlyerNumber),
+        optional_chr_field(field::Field::IdAdIndicator),
+        optional_str_field(field::Field::FreeBaggageAllowance),
+        optional_chr_field(field::Field::FastTrack),
+    ))(conditional_item_data)?;
 
     // Anything remaining in the section is ascribed to airline individual use.
     let airline_individual_use = if individual_use_data.len() > 0 {
@@ -316,7 +329,7 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
 
     // The type field is mandatory, as is at least the length of the security data.
     let (input, type_of_security_data) =
-        character_field(input, field::Field::TypeOfSecurityData)?;
+        chr_field(field::Field::TypeOfSecurityData)(input)?;
     let (input, security_data_field_data) =
         variable_size_field_data(input, field::Field::LengthOfSecurityData)?;
 
@@ -340,17 +353,18 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
 ///
 /// The input must contain only valid ASCII characters.
 fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str>> {
-    // Check that the input string is likely an M-type BCBP string.
-    let (input, _) = format_code_m(input)?;
-
-    // The number of legs informs the breakdown of the various field iterators.
-    let (input, number_of_legs_encoded) = number_of_legs(input)?;
-
-    // Scan mandatory unique fields.
-    let (input, passenger_name) = 
-        string_field(input, field::Field::PassengerName)?;
-    let (input, electronic_ticket_indicator) =
-        character_field(input, field::Field::ElectronicTicketIndicator)?;
+    // Scan mandatory unique fields including the format code and the number of legs encoded.
+    let (input, (
+        _,
+        number_of_legs_encoded,
+        passenger_name,
+        electronic_ticket_indicator,
+    )) = tuple((
+        format_code_m,
+        number_of_legs,
+        str_field(field::Field::PassengerName),
+        chr_field(field::Field::ElectronicTicketIndicator),
+    ))(input)?;
 
     // Collect the legs and metadata fields.
     let mut legs = Vec::new();
@@ -375,10 +389,10 @@ fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str
     }
 
     // Consume security data that follows the last leg, if any.
-    let (input, security_data) = security_data(input)?;
+    let (remainder, security_data) = security_data(input)?;
 
     Ok((
-        input,
+        remainder,
         bcbp::Bcbp {
             passenger_name,
             electronic_ticket_indicator,
@@ -416,14 +430,5 @@ where
         Err(Error::TrailingCharacters)
     } else {
         Ok(boarding_pass)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_from_str() {
     }
 }
