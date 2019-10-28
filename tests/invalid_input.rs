@@ -61,8 +61,8 @@ fn invalid_start_of_security_data() {
     const PASS_STR: &str = "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100+100";
     assert_eq!(
         Bcbp::from_str(PASS_STR),
-        Err(Error::ParseFailed(
-            "0: at line 0:\n".to_owned() +
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0:\n" +
             "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100+100\n" +
             "                                                            ^\n" +
             "expected '^', found +\n" +
@@ -81,7 +81,17 @@ fn invalid_start_of_version_number() {
     const PASS_STR: &str = "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 14D+6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^100";
     assert_eq!(
         Bcbp::from_str(PASS_STR),
-        Err(Error::ParseFailed(String::from("")))
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0:\n" +
+            "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 14D+6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^100\n" +
+            "                                                            ^\n" +
+            "expected \'>\', found +\n" +
+            "\n" +
+            "1: at line 0, in Beginning of Version Number:\n" +
+            "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 14D+6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^100\n" +
+            "                                                            ^\n" +
+            "\n"
+        ))
     );
 }
 
@@ -91,14 +101,32 @@ fn expected_integer() {
     const PASS_STR_1: &str = "MXDESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^100+";
     assert_eq!(
         Bcbp::from_str(PASS_STR_1),
-        Err(Error::ParseFailed(String::from("")))
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0, in TakeWhileMN:\n" +
+            "MXDESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^100+\n" +
+            " ^\n" +
+            "\n" +
+            "1: at line 0, in Number of Legs Encoded:\n" +
+            "MXDESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^100+\n" +
+            " ^\n" +
+            "\n"
+        ))
     );
 
     // This is a complete and valid Type 'M' boarding pass from the IATA 792B examples, with security data length 'YY'.
     const PASS_STR_2: &str = "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^1YY";
     assert_eq!(
         Bcbp::from_str(PASS_STR_2),
-        Err(Error::ParseFailed(String::from("")))
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0, in TakeWhileMN:\n" +
+            "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^1YY\n" +
+            "                                                              ^\n" +
+            "\n" +
+            "1: at line 0, in Length of Security Data:\n" + 
+            "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100^1YY\n" +
+            "                                                              ^\n" +
+            "\n"
+        ))
     );
 }
 
@@ -108,7 +136,12 @@ fn subsection_too_long() {
     const PASS_STR: &str = "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 1FF>6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^100";
     assert_eq!(
         Bcbp::from_str(PASS_STR),
-        Err(Error::ParseFailed(String::from("")))
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0, in Eof:\n" +
+            "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 1FF>6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^100\n" +
+            "                                                            ^\n" +
+            "\n"
+        ))
     );
 }
 
@@ -118,13 +151,27 @@ fn unexpected_end_of_input() {
     const PASS_STR_SEC: &str = "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 14D>6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^101";
     assert_eq!(
         Bcbp::from_str(PASS_STR_SEC),
-        Err(Error::UnexpectedEndOfInput)
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0, in Eof:\n" +
+            "M2DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 14D>6181WW6225BAC 00141234560032A0141234567890 1AC AC 1234567890123    20KYLX58ZDEF456 FRAGVALH 3664 227C012C0002 12E2A0140987654321 1AC AC 1234567890123    2PCNWQ^101\n" +
+            "                                                                                                                                                                                                                                ^\n" +
+            "\n"
+        ))
     );
 
     // This is an incomplete type M pass truncated half way through the name field.
     const PASS_STR_NAME: &str = "M2DESMARAIS";
     assert_eq!(
         Bcbp::from_str(PASS_STR_NAME),
-        Err(Error::UnexpectedEndOfInput)
+        Err(Error::ParseFailed(String::new() +
+            "0: at line 0, in Eof:\n" +
+            "M2DESMARAIS\n" +
+            "  ^\n" +
+            "\n" +
+            "1: at line 0, in Passenger Name:\n" +
+            "M2DESMARAIS\n" +
+            "  ^\n" +
+            "\n"
+        ))
     );
 }
