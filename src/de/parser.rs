@@ -70,13 +70,6 @@ fn number_of_legs<'a>(input: &'a str) -> IResult<&'a str, u8, VerboseError<&'a s
     )(input)
 }
 
-/// Parses the format code specifier tag for an M-type IATA BCBP pass.
-fn format_code_m<'a>(input: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    context(field::Field::FormatCode.name(), 
-        char('M')
-    )(input)
-}
-
 /// Parses and returns an (optional) version number field, beginning with the '>' indicator.
 fn optional_version_number<'a>(input: &'a str) -> IResult<&'a str, Option<char>, VerboseError<&'a str>> {
     if input.len() == 0 {
@@ -101,8 +94,6 @@ where
 {
     // Verify that the size of the storage array matches the field exactly.
     assert_eq!(std::mem::size_of::<T>(), field_id.len());
-
-    // Returns a parser 
     context(field_id.name(),
         map_res(
             take(field_id.len()), 
@@ -126,7 +117,10 @@ where
         if input.len() == 0 {
             Ok((input, None))
         } else {
-            str_field(field_id)(input).map(|(input, field)| (input, Some(field)))
+            map(
+                str_field(field_id),
+                |field_value| Some(field_value),
+            )(input)
         }
     }
 }
@@ -330,7 +324,7 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
     // The type field is mandatory, as is at least the length of the security data.
     let (input, type_of_security_data) =
         chr_field(field::Field::TypeOfSecurityData)(input)?;
-    let (input, security_data_field_data) =
+    let (remainder, security_data_field_data) =
         variable_size_field_data(input, field::Field::LengthOfSecurityData)?;
 
     // Variable-length security data is stored as a String.
@@ -341,7 +335,7 @@ fn security_data<'a>(input: &'a str) -> IResult<&'a str, bcbp::SecurityData, Ver
     };
 
     Ok((
-        input,
+        remainder,
         bcbp::SecurityData {
             type_of_security_data: Some(type_of_security_data),
             security_data: security_data
@@ -360,7 +354,7 @@ fn bcbp<'a>(input: &'a str) -> IResult<&'a str, bcbp::Bcbp, VerboseError<&'a str
         passenger_name,
         electronic_ticket_indicator,
     )) = tuple((
-        format_code_m,
+        char('M'),
         number_of_legs,
         str_field(field::Field::PassengerName),
         chr_field(field::Field::ElectronicTicketIndicator),
@@ -414,7 +408,7 @@ where
     }
 
     // Sanity-check that the input is likely an IATA Type M BCBP Boarding Pass.
-    if !format_code_m(input).is_ok() {
+    if !input.starts_with("M") {
         return Err(Error::UnsupportedFormat);
     }
 
