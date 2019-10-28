@@ -406,7 +406,7 @@ where
 
     // Pass the provided input data with the nom combinator and map the error.
     let (remainder, boarding_pass) = bcbp(input).map_err(|e| match e {
-        nom::Err::Incomplete(_) => 
+        nom::Err::Incomplete(_) =>
             Error::UnexpectedEndOfInput,
         nom::Err::Error(verbose_error) | nom::Err::Failure(verbose_error) =>
             Error::ParseFailed(convert_error(input, verbose_error)),
