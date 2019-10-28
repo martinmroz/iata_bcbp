@@ -5,8 +5,9 @@
 
 use std::fmt;
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub enum Field {
+pub(crate) enum Field {
     /// Item 1: Format Code. 1 byte. Data Type 'f'.
     FormatCode,
     /// Item 4: Airline Individual Use. n bytes. Data Type unspecified.
