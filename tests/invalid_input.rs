@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Martin Mroz
+// Copyright (C) 2019 Martin Mroz
 //
 // This software may be modified and distributed under the terms
 // of the MIT license.  See the LICENSE file for details.
@@ -61,7 +61,17 @@ fn invalid_start_of_security_data() {
     const PASS_STR: &str = "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100+100";
     assert_eq!(
         Bcbp::from_str(PASS_STR),
-        Err(Error::ParseFailed(String::from("")))
+        Err(Error::ParseFailed(
+            "0: at line 0:\n".to_owned() +
+            "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100+100\n" +
+            "                                                            ^\n" +
+            "expected '^', found +\n" +
+            "\n" +
+            "1: at line 0, in Beginning of Security Data:\n" +
+            "M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 326J001A0025 100+100\n" +
+            "                                                            ^\n" +
+            "\n"
+        ))
     );
 }
 
